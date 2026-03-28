@@ -1,0 +1,9 @@
+project:
+  output-dir: _docs
+
+website:
+  title: "pyskills"
+  site-url: "https://AnswerDotAI.github.io/pyskills"
+  description: "Python-native skills system"
+  repo-branch: main
+  repo-url: "https://github.com/AnswerDotAI/pyskills"
