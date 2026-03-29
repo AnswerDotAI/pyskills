@@ -13,7 +13,7 @@ from fastcore.docments import MarkdownRenderer
 from fastcore.xdg import *
 from importlib.metadata import entry_points
 from inspect import signature
-import importlib.util, types, inspect, collections, ast
+import importlib.util, types, inspect, collections, ast, site
 
 # %% ../nbs/00_core.ipynb #6dda45ba
 def ep_desc(ep):
@@ -49,7 +49,17 @@ def allow(*c, allow_policy=None): # Callable that raises if call not allowed
         if isinstance(o, dict):
             for k,v in o.items(): __pytools__[k].update(_wrap(x) for x in listify(v))
         else:
+            objclass = getattr(o, '__objclass__', None)
+            if objclass is not None:
+                __pytools__[objclass].add(_wrap(o.__name__))
+                continue
+            qualname = getattr(o, '__qualname__', '') or ''
             mod = sys.modules.get(getattr(o, '__module__', '__main__'), sys.modules.get('__main__'))
+            if '.' in qualname:
+                cls = getattr(mod, qualname.rsplit('.', 1)[0], None)
+                if cls is not None:
+                    __pytools__[cls].add(_wrap(o.__name__))
+                    continue
             __pytools__[mod].add(_wrap(o.__name__))
     if len(c)==1 and callable(c[0]): return c[0]
 
