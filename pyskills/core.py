@@ -4,11 +4,12 @@
 
 # %% auto #0
 __all__ = ['ep_desc', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosAllowPolicy', 'PathWritePolicy', 'OpenWritePolicy',
-           'doc', 'pyskills_dir', 'ensure_pyskills_dir', 'clear_mod', 'enable_pyskill', 'register_pyskill',
-           'disable_pyskill', 'delete_pyskill', '__pytools__']
+           'xdir', 'doc', 'docfind', 'pyskills_dir', 'ensure_pyskills_dir', 'clear_mod', 'enable_pyskill',
+           'register_pyskill', 'disable_pyskill', 'delete_pyskill', '__pytools__']
 
 # %% ../nbs/00_core.ipynb #38e384dc
 from fastcore.utils import *
+from fastcore.xml import Safe
 from fastcore.docments import MarkdownRenderer
 from fastcore.xdg import *
 from importlib.metadata import entry_points
@@ -95,12 +96,71 @@ class OpenWritePolicy(AllowPolicy):
         mode = kwargs.get('mode', args[1] if len(args) > 1 else 'r')
         if any(c in mode for c in 'wax+'): chk_dest(args[0] if args else kwargs.get('file'), ok_dests)
 
-# %% ../nbs/00_core.ipynb #7492f01d
+# %% ../nbs/00_core.ipynb #c21d33bf
+def _is_own(sym, n):
+    "Whether name `n` in module `sym` is an owned symbol or sibling submodule"
+    m = getattr(sym, n, None)
+    if m is None: return False
+    if getattr(m, '__module__', None) == sym.__name__: return True
+    return isinstance(m, types.ModuleType) and m.__name__.split('.')[0] == sym.__name__.split('.')[0]
+
+# %% ../nbs/00_core.ipynb #67114fc7
+def _imported_submods(sym):
+    "Sibling submodules explicitly imported via `import pkg.sub` by module `sym`"
+    pkg = sym.__name__.rsplit('.', 1)[0] if '.' in sym.__name__ else None
+    if not pkg: return {}
+    res = {}
+    for node in ast.walk(ast.parse(inspect.getsource(sym))):
+        if not isinstance(node, ast.Import): continue
+        for alias in node.names:
+            if alias.name.startswith(pkg + '.') and alias.name != sym.__name__:
+                m = sys.modules.get(alias.name)
+                if m: res[alias.asname or alias.name] = m
+    return res
+
+def _is_own(sym, n):
+    "Whether name `n` in module `sym` is an owned symbol or sibling submodule"
+    m = getattr(sym, n, None)
+    if m is None: return False
+    if getattr(m, '__module__', None) == sym.__name__: return True
+    if not isinstance(m, types.ModuleType): return False
+    mname = m.__name__
+    if sym.__name__.startswith(mname + '.'): return False
+    return mname.split('.')[0] == sym.__name__.split('.')[0]
+
+# %% ../nbs/00_core.ipynb #cc49f150
+def _xdir(sym):
+    "Filtered (name, obj) pairs for public symbols of a module or class (or anything with `__dir__`)"
+    if isinstance(sym, types.ModuleType):
+        names = getattr(sym, '__all__', None)
+        if names is None: names = [n for n in sorted(dir(sym)) if not n.startswith('_') and _is_own(sym, n)]
+        res = [(n, getattr(sym, n)) for n in names if getattr(sym, n, None) is not None]
+        subs = _imported_submods(sym)
+        return res + [(n, m) for n,m in sorted(subs.items()) if n not in dict(res)]
+    if isinstance(sym, type):
+        res = []
+        init = getattr(sym, '__init__', None)
+        if init and init is not object.__init__: res.append(('__init__', init))
+        return res + [(n, v) for n,v in sorted(sym.__dict__.items()) if not n.startswith('_')]
+    if '__dir__' not in type(sym).__dict__: return []
+    return [(n, getattr(sym, n, None)) for n in sorted(dir(sym)) if not n.startswith('_')]
+
+@allow
+def xdir(sym):
+    "Filtered names for public symbols of a module or class (or anything with `__dir__`)"
+    return [o for o,_ in _xdir(sym)]
+
+# %% ../nbs/00_core.ipynb #b32f42cb
+@allow
 def doc(sym)->str:
-    "Docs for `sym`. modules: classes/functions with 1st docstring line; classes: method sigs; functions: sig+docments"
     if isinstance(sym, type): return _doc_class(sym)
     if isinstance(sym, types.ModuleType): return _doc_module(sym)
-    return str(MarkdownRenderer(sym))
+    if hasattr(sym, '_repr_markdown_'): return sym._repr_markdown_()
+    if '__str__' in type(sym).__dict__: return str(sym)
+    if '__repr__' in type(sym).__dict__: return repr(sym)
+    items = _xdir(sym)
+    if items: return _doc_instance(sym, items)
+    return Safe(MarkdownRenderer(sym))
 
 def _fmt_method(name, method, prefix=''):
     try: sig = str(signature(method))
@@ -114,17 +174,15 @@ def _fmt_method(name, method, prefix=''):
 def _doc_class(sym):
     bases = ','.join(b.__name__ for b in sym.__mro__[1:-1]) if sym.__mro__[1:-1] else ''
     parts = [f'class {sym.__name__}({bases}):' if bases else f'class {sym.__name__}:']
-    init = getattr(sym, '__init__', None)
-    if init and init is not object.__init__: parts.append(_fmt_method('__init__', init))
-    for name,raw in sorted(sym.__dict__.items()):
-        if name.startswith('_'): continue
+    for name,raw in _xdir(sym):
         if isinstance(raw, property): parts.append(_fmt_method(name, raw.fget, '@property\n    '))
         elif isinstance(raw, classmethod): parts.append(_fmt_method(name, raw.__func__, '@classmethod\n    '))
         elif isinstance(raw, staticmethod): parts.append(_fmt_method(name, raw.__func__, '@staticmethod\n    '))
         elif callable(raw): parts.append(_fmt_method(name, raw))
-    d = sym.__doc__ or (init and init.__doc__)
+    d = sym.__doc__ or (getattr(sym, '__init__', None) and sym.__init__.__doc__)
     if d: parts.insert(1, '    """' + inspect.cleandoc(d).replace('\n', '\n    ') + '"""')
     return parts[0] + '\n' + '\n'.join(parts[1:])
+
 
 # %% ../nbs/00_core.ipynb #8009e36f
 def _fmt_allows(mod):
@@ -134,33 +192,37 @@ def _fmt_allows(mod):
     calls = [node for node in ast.walk(tree) if isinstance(node, ast.Expr)
              and isinstance(node.value, ast.Call) and ast.unparse(node.value.func) == 'allow']
     if not calls: return ''
-    return '\nallows:\n' + '\n'.join(f'- {ast.unparse(node.value)}' for node in calls)
+    return '\n## allows:\n' + '\n'.join(f'- {ast.unparse(node.value)}' for node in calls)
 
-# %% ../nbs/00_core.ipynb #e8d8c5fa
-def _doc_module(mod):
-    parts = [f'module {mod.__name__}:']
-    if mod.__doc__: parts.append('"""' + inspect.cleandoc(mod.__doc__) + '"""\n')
-    names = getattr(mod, '__all__', None)
-    if names is None:
-        names = [n for n in sorted(dir(mod)) 
-            if not n.startswith('_') and getattr(getattr(mod, n, None), '__module__', None)==mod.__name__]
-    for name in names:
-        obj = getattr(mod, name, None)
-        if obj is None: continue
-        ds = getattr(obj, '__doc__', None)
-        if not ds and isinstance(obj, type): ds = getattr(getattr(obj, '__init__', None), '__doc__', None)
-        d = (ds or '').splitlines()
-        comment = f': ...  # {d[0].strip()}' if d and d[0].strip() else ''
-        if isinstance(obj, type):
-            bases = ','.join(b.__name__ for b in obj.__mro__[1:-1])
-            base_str = f'({bases})' if bases else ''
-            parts.append(f'class {name}{base_str}{comment}')
-        elif callable(obj):
+# %% ../nbs/00_core.ipynb #ccca39db
+def _doc_instance(sym, items):
+    parts = [f'Instance of type {type(sym).__name__}:']
+    for name,obj in items:
+        ds = (getattr(obj, '__doc__', None) or '').splitlines()
+        comment = f'  # {ds[0].strip()}' if ds and ds[0].strip() else ''
+        if callable(obj):
             try: sig = str(signature(obj))
             except (ValueError, TypeError): sig = '(...)'
-            parts.append(f'def {name}{sig}{comment}')
-    parts.append(_fmt_allows(mod))
+            parts.append(f'- {name}{sig}{comment}')
+        else: parts.append(f'- {name}: {type(obj).__name__} = {repr(obj)[:80]}')
     return '\n'.join(parts)
+
+# %% ../nbs/00_core.ipynb #c22af8b2
+@allow
+def docfind(o, q, n=2, _pre=''):
+    "Search `doc()` recursively through `xdir(o)`, looking at submodules, classes, and functions, to depth `n`"
+    pat = re.compile(q, re.IGNORECASE)
+    res = []
+    try: d = doc(o) or ''
+    except: d = ''
+    if pat.search(d): res.append(_pre + ' // ' + d.split('\n')[0])
+    if n > 0:
+        for k in xdir(o):
+            try: child = getattr(o, k)
+            except: continue
+            nm = f'{_pre}.{k}' if _pre else k
+            res += docfind(child, q, n-1, nm)
+    return res
 
 # %% ../nbs/00_core.ipynb #a486485f
 def pyskills_dir():

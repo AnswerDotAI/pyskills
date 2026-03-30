@@ -9,7 +9,7 @@ Call `list_pyskills()` to get a `{module: description}` dict of all registered p
 Use standard Python import, then `doc()` to inspect at increasing detail:
 
     import pyskills.skill
-    doc(pyskills.skill)        # module overview: classes, functions, and what's callable
+    doc(pyskills.skill)        # module overview: classes, functions, submodules, and allows
     doc(SkillTestClass)        # class detail: bases, __init__, methods, properties
     doc(skill_test_func)       # function detail: full signature with docments
 
@@ -37,8 +37,8 @@ This module includes a test class and function to verify the system works:
 """
 
 from pyskills.core import allow
-
-__all__ = ['allow', 'SkillTestClass', 'skill_test_func']
+# inspect is unused - imported to show that non-owned submodules aren't listed in doc/xdir
+import pyskills.createskill, inspect
 
 class SkillTestClass(str):
     """Some class.

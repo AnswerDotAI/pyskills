@@ -6,7 +6,7 @@ A pyskill is a standard Python module that registers itself via entry points so 
 
 Your module needs:
 - A docstring: first paragraph is the short description shown during discovery; the rest is read by the LLM after loading.
-- `__all__`: lists the symbols available to the LLM.
+- `__all__` (optional): if provided, `doc()` and `xdir()` show exactly these symbols. Otherwise they fall back to non-private names defined in the module (not just imported), plus explicitly imported sibling submodules.
 - `allow()` calls: declares what the LLM is permitted to call.
 
 ## 2. Register via entry point
@@ -65,6 +65,8 @@ Policies are stored as `(name, AllowPolicy)` tuples in `__pytools__`. The host p
             ...
 
     allow(my_func, {MyClass: ...})
+
+After import, the LLM inspects the module with `doc(module)` (overview of classes, functions, submodules, and allows) and `xdir(module)` (filtered list of public symbols).
 
 ## 6. Local pyskills without packaging
 
