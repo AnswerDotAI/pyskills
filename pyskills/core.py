@@ -256,13 +256,21 @@ def pyskills_dir():
 
 def ensure_pyskills_dir():
     "Create xdg pyskills dir and .pth file if needed"
-    sd = pyskills_dir()
-    if sd.exists(): return
-    sd.mkdir(parents=True)
-    pth = Path(site.getsitepackages()[0]) / 'pyskills.pth'
-    sd = str(sd)
-    pth.write_text(sd + '\n')
-    if sd not in sys.path: sys.path.append(sd)
+    sd = str(pyskills_dir())
+    if sd in sys.path: return
+    Path(sd).mkdir(parents=True, exist_ok=True)
+    sps = site.getsitepackages()
+    try: sps.append(site.getusersitepackages())
+    except AttributeError: pass
+    for sp in sps:
+        pth = Path(sp) / 'pyskills.pth'
+        if pth.exists() and sd in pth.read_text(): break
+        try:
+            Path(sp).mkdir(parents=True, exist_ok=True)
+            pth.write_text(sd + '\n')
+            break
+        except (PermissionError, OSError): pass
+    sys.path.append(sd)
 
 # %% ../nbs/00_core.ipynb #2b3b357f
 ensure_pyskills_dir()
@@ -302,7 +310,7 @@ def disable_pyskill(name):
     if di.exists(): shutil.rmtree(di)
     clear_mod(name.split('.')[0])
 
-# %% ../nbs/00_core.ipynb #f74fdb5d
+# %% ../nbs/00_core.ipynb #1dadedfc
 def delete_pyskill(name):
     "Delete pyskill `name` module files and dist-info"
     disable_pyskill(name)
