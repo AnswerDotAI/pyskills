@@ -10,7 +10,7 @@ __all__ = ['ep_desc', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosA
 # %% ../nbs/00_core.ipynb #38e384dc
 from fastcore.utils import *
 from fastcore.xml import Safe
-from fastcore.docments import MarkdownRenderer
+from fastcore.docments import MarkdownRenderer,can_render
 from fastcore.xdg import *
 from importlib.metadata import entry_points
 from inspect import signature
@@ -150,18 +150,19 @@ def xdir(sym):
     "Filtered names for public symbols of a module or class (or anything with `__dir__`)"
     return [o for o,_ in _xdir(sym)]
 
-# %% ../nbs/00_core.ipynb #b32f42cb
+# %% ../nbs/00_core.ipynb #15e66852
 @allow
 def doc(sym)->str:
     if isinstance(sym, type): return _doc_class(sym)
     if isinstance(sym, types.ModuleType): return _doc_module(sym)
     if hasattr(sym, '_repr_markdown_'): return sym._repr_markdown_()
+    if callable(sym) and can_render(sym): return Safe(MarkdownRenderer(sym))
+    if (items := _xdir(sym)): return _doc_instance(sym, items)
     if '__str__' in type(sym).__dict__: return str(sym)
     if '__repr__' in type(sym).__dict__: return repr(sym)
-    items = _xdir(sym)
-    if items: return _doc_instance(sym, items)
     return Safe(MarkdownRenderer(sym))
 
+# %% ../nbs/00_core.ipynb #ae0c509a
 def _fmt_method(name, method, prefix=''):
     try: sig = str(signature(method))
     except (ValueError, TypeError): sig = '(...)'
@@ -170,7 +171,6 @@ def _fmt_method(name, method, prefix=''):
     if d and name != '__init__': res += f'  # {d.splitlines()[0].strip()}'
     return res
 
-# %% ../nbs/00_core.ipynb #da79ca9b
 def _doc_class(sym):
     bases = ','.join(b.__name__ for b in sym.__mro__[1:-1]) if sym.__mro__[1:-1] else ''
     parts = [f'class {sym.__name__}({bases}):' if bases else f'class {sym.__name__}:']
@@ -193,6 +193,31 @@ def _fmt_allows(mod):
              and isinstance(node.value, ast.Call) and ast.unparse(node.value.func) == 'allow']
     if not calls: return ''
     return '\n## allows:\n' + '\n'.join(f'- {ast.unparse(node.value)}' for node in calls)
+
+# %% ../nbs/00_core.ipynb #b2b29e28
+def _doc_module(mod):
+    parts = [f'# module {mod.__name__}:\n']
+    if mod.__doc__: parts.append(f'"""{inspect.cleandoc(mod.__doc__)}\n"""')
+    typs,funcs,subs = [],[],[]
+    for name,obj in _xdir(mod):
+        ds = getattr(obj, '__doc__', None)
+        if not ds and isinstance(obj, type): ds = getattr(getattr(obj, '__init__', None), '__doc__', None)
+        d = (ds or '').splitlines()
+        comment = f': ...  # {d[0].strip()}' if d and d[0].strip() else ''
+        if isinstance(obj, types.ModuleType): subs.append(f'  {name}{comment}')
+        elif isinstance(obj, type):
+            bases = ','.join(b.__name__ for b in obj.__mro__[1:-1])
+            base_str = f'({bases})' if bases else ''
+            typs.append(f'- class {name}{base_str}{comment}')
+        elif callable(obj):
+            try: sig = str(signature(obj))
+            except (ValueError, TypeError): sig = '(...)'
+            funcs.append(f'- def {name}{sig}{comment}')
+    if typs: parts += ['\n## types:', *typs]
+    if funcs: parts += ['\n## functions:', *funcs]
+    if subs: parts += ['\n## submodules:', *subs]
+    parts.append(_fmt_allows(mod))
+    return '\n'.join(parts)
 
 # %% ../nbs/00_core.ipynb #ccca39db
 def _doc_instance(sym, items):
