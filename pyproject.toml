@@ -34,3 +34,4 @@ version = {attr = "pyskills.__version__"}
 include = ["pyskills"]
 
 [tool.nbdev]
+allowed_cell_metadata_keys = ["solveit_ai"]
