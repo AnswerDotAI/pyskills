@@ -237,8 +237,8 @@ from .core import PosAllowPolicy,AllowPolicy,allow
 
 # %% ../nbs/01_edit.ipynb #0af37e32
 _wp = PosAllowPolicy(0)
-allow({file_insert_line: _wp, file_str_replace: _wp, file_strs_replace: _wp, file_replace_lines: _wp, file_del_lines: _wp,
-       cell_insert_line: _wp, cell_str_replace: _wp, cell_strs_replace: _wp, cell_replace_lines: _wp, cell_del_lines: _wp})
+allow(file_insert_line, file_str_replace, file_strs_replace, file_replace_lines, file_del_lines,
+       cell_insert_line, cell_str_replace, cell_strs_replace, cell_replace_lines, cell_del_lines, allow_policy=_wp)
 allow(view_cell, view_nb)
 
 # %% ../nbs/01_edit.ipynb #1b4483f2
