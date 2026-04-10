@@ -60,7 +60,7 @@ def file_edit(f, name=None):
     res = splice_sig(wrapper, f, 'text')
     if name: res.__name__ = res.__qualname__ = name
     res.__doc__ = (f.__doc__ or '') + _file_edit_doc
-    return llm_tool(res)
+    return llmtool(res)
 
 # %% ../nbs/01_edit.ipynb #b694c73a
 def insert_line(
