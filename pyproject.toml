@@ -23,6 +23,7 @@ Documentation = "https://AnswerDotAI.github.io/pyskills/"
 
 [project.entry-points.pyskills]
 "pyskills.skill" = "pyskills.skill"
+"pyskills.edit" = "pyskills.edit"
 
 [project.entry-points.nbdev]
 pyskills = "pyskills._modidx:d"
