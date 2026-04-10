@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.5
+
+### New Features
+
+- Add pyskills.edit ([#6](https://github.com/AnswerDotAI/pyskills/issues/6))
+- Improve `ensure_pyskills_dir` to try all site-packages paths with permission fallback ([#5](https://github.com/AnswerDotAI/pyskills/issues/5))
+
+
 ## 0.0.4
 
 ### New Features
