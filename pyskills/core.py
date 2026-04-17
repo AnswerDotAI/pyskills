@@ -66,7 +66,7 @@ def allow(*c, allow_policy=None): # Callable that raises if call not allowed
 
 # %% ../nbs/00_core.ipynb #a3124a91
 def chk_dest(p, ok_dests):
-    resolved = str(Path(p).resolve())
+    resolved = str(Path(p).expanduser().resolve())
     if not any(resolved == (rd := str(Path(d).expanduser().resolve())) or resolved.startswith(rd + '/') for d in ok_dests):
         raise PermissionError(f"Dest '{p}' not allowed; permitted: {ok_dests}")
 
