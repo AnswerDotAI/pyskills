@@ -19,7 +19,8 @@ import importlib.util, types, inspect, collections, ast, site
 # %% ../nbs/00_core.ipynb #6dda45ba
 def ep_desc(ep):
     "First paragraph of docstring for entry point `ep`, without importing it"
-    spec = importlib.util.find_spec(ep.value.split(':')[0])
+    try: spec = importlib.util.find_spec(ep.value.split(':')[0])
+    except: return
     if not spec or not spec.origin: return None
     tree = ast.parse(Path(spec.origin).read_text())
     doc = ast.get_docstring(tree)
@@ -32,7 +33,8 @@ def list_pyskills():
     """Returns {module: description} for all pyskills. To load a module, use `import {module}` then view `doc({module}).
     **NB**: pyskills are *THE* critical way to extend functionality. *ALWAYS* check for pyskills to help with tasks.
     If unsure whether a particular pyskill might help, load it and grabs its docs to see!"""
-    return {ep.value: ep_desc(ep) for ep in entry_points().select(group='pyskills')}
+    return {ep.value: epd for ep in entry_points().select(group='pyskills')
+        if (epd := ep_desc(ep)) is not None}
 
 # %% ../nbs/00_core.ipynb #e5adaf7a
 __pytools__ = collections.defaultdict(set)
