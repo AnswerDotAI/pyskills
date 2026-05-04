@@ -2,6 +2,17 @@
 
 <!-- do not remove -->
 
+## 0.0.7
+
+### New Features
+
+- Harden `ep_desc` against import errors and filter None entries from `list_pyskills` ([#8](https://github.com/AnswerDotAI/pyskills/issues/8))
+
+### Bugs Squashed
+
+- fix `chk_dest` expand user ([#7](https://github.com/AnswerDotAI/pyskills/pull/7)), thanks to [@KeremTurgutlu](https://github.com/KeremTurgutlu)
+
+
 ## 0.0.6
 
 ### New Features
