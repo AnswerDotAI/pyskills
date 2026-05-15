@@ -23,6 +23,12 @@ The module-level `doc()` output ends with an `allows:` section listing exactly w
 - `allow({SomeClass: ['method1', 'method2']})` : those specific methods of SomeClass
 - `allow({SomeClass: ...})` : all public methods of `SomeClass`
 
+## Loading is not namespacing
+
+Importing a pyskill loads its documentation, permissions, and setup code. It does not mean callables should be invoked through the pyskill module path.
+
+Use the names shown in examples and in the `allows:` section. If a qualified call like `some_skill.fn(...)` fails but the direct name `fn(...)` is present and documented, use the direct name. Do not invent module-qualified paths unless the docs show them.
+
 ## Testing
 
 This module includes a test class and function to verify the system works:
