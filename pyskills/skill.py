@@ -62,5 +62,11 @@ def skill_test_func(
     "A test function"
     return f"You call me with the arg: {x}"
 
-allow(skill_test_func, SkillTestClass)
+async def async_skill_test_func(
+    x:int=0 # the input
+)->str: # the output
+    "A test function"
+    return f"You call me with the arg: {x}"
+
+allow(skill_test_func, async_skill_test_func, SkillTestClass)
 
