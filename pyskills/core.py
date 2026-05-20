@@ -14,7 +14,7 @@ from fastcore.docments import MarkdownRenderer,can_render
 from fastcore.xdg import *
 from importlib.metadata import entry_points
 from inspect import signature
-import importlib.util, types, inspect, collections, ast, site
+import importlib.util, types, inspect, collections, ast, site, shutil
 
 # %% ../nbs/00_core.ipynb #6dda45ba
 def ep_desc(ep):
@@ -214,7 +214,7 @@ def _doc_module(mod):
         elif callable(obj):
             try: sig = str(signature(obj))
             except (ValueError, TypeError): sig = '(...)'
-            funcs.append(f'- def {name}{sig}{comment}')
+            funcs.append(f'- {'async def' if inspect.iscoroutinefunction(obj) else 'def'} {name}{sig}{comment}')
     if typs: parts += ['\n## types:', *typs]
     if funcs: parts += ['\n## functions:', *funcs]
     if subs: parts += ['\n## submodules:', *subs]
