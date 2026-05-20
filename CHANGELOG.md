@@ -2,6 +2,15 @@
 
 <!-- do not remove -->
 
+## 0.0.8
+
+### Bugs Squashed
+
+- Currently `_doc_module` hardcodes function def which loses sync/async info and causes AI to not await an async function
+- Added missing `shutil` import
+- Removed export marker from the first note msg in `edit` dialog which was causing it to appear twice in the docstring
+
+
 ## 0.0.7
 
 ### New Features
