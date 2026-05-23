@@ -80,28 +80,30 @@ def chk_dest(p, ok_dests):
 # %% ../nbs/00_core.ipynb #59efbf64
 class AllowPolicy:
     "Base for allow destination policies"
-    def __call__(self, obj, args, kwargs, ok_dests): raise NotImplementedError
+    def __call__(self, obj, args, kwargs, data): raise NotImplementedError
 
 class PosAllowPolicy(AllowPolicy):
     "Check positional/keyword arg is an allowed destination"
     def __init__(self, pos=0, kw=None): store_attr()
-    def __call__(self, obj, args, kwargs, ok_dests):
+    def __call__(self, obj, args, kwargs, data):
         p = kwargs.get(self.kw) if self.kw and self.kw in kwargs else args[self.pos] if self.pos < len(args) else None
-        if p is not None: chk_dest(p, ok_dests)
+        if p is not None: chk_dest(p, data['ok_dests'])
 
 class PathWritePolicy(AllowPolicy):
     "Check resolved Path self, optionally also target args"
     def __init__(self, target_pos=None, target_kw=None): store_attr()
-    def __call__(self, obj, args, kwargs, ok_dests):
-        chk_dest(obj, ok_dests)
-        if self.target_pos is not None and self.target_pos < len(args): chk_dest(args[self.target_pos], ok_dests)
-        if self.target_kw and self.target_kw in kwargs: chk_dest(kwargs[self.target_kw], ok_dests)
+    def __call__(self, obj, args, kwargs, data):
+        ok = data['ok_dests']
+        chk_dest(obj, ok)
+        if self.target_pos is not None and self.target_pos < len(args): chk_dest(args[self.target_pos], ok)
+        if self.target_kw and self.target_kw in kwargs: chk_dest(kwargs[self.target_kw], ok)
 
 class OpenWritePolicy(AllowPolicy):
     "Check open() only when mode is writable"
-    def __call__(self, obj, args, kwargs, ok_dests):
+    def __call__(self, obj, args, kwargs, data):
         mode = kwargs.get('mode', args[1] if len(args) > 1 else 'r')
-        if any(c in mode for c in 'wax+'): chk_dest(args[0] if args else kwargs.get('file'), ok_dests)
+        if any(c in mode for c in 'wax+'): chk_dest(args[0] if args else kwargs.get('file'), data['ok_dests'])
+
 
 # %% ../nbs/00_core.ipynb #c21d33bf
 def _is_own(sym, n):
@@ -317,7 +319,7 @@ def disable_pyskill(name):
     if di.exists(): shutil.rmtree(di)
     clear_mod(name.split('.')[0])
 
-# %% ../nbs/00_core.ipynb #1dadedfc
+# %% ../nbs/00_core.ipynb #1e4f4c4c
 def delete_pyskill(name):
     "Delete pyskill `name` module files and dist-info"
     disable_pyskill(name)
