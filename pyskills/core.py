@@ -52,14 +52,17 @@ def allow(*c, allow_policy=None): # Callable that raises if call not allowed
         return (v, allow_policy)
     for o in c:
         if isinstance(o, dict):
-            for k,v in o.items(): __pytools__[k].update(_wrap(x) for x in listify(v))
+            for k,v in o.items():
+                if callable(k) and not isinstance(k, (type, types.ModuleType)): allow(k, allow_policy=v)
+                else: __pytools__[k].update(_wrap(x) for x in listify(v))
         else:
             objclass = getattr(o, '__objclass__', None)
             if objclass is not None:
                 __pytools__[objclass].add(_wrap(o.__name__))
                 continue
             qualname = getattr(o, '__qualname__', '') or ''
-            mod = sys.modules.get(getattr(o, '__module__', '__main__'), sys.modules.get('__main__'))
+            mod = sys.modules.get(getattr(o, '__globals__', {}).get('__name__'
+                ) or getattr(o, '__module__', '__main__'), sys.modules.get('__main__'))
             if '.' in qualname:
                 cls = getattr(mod, qualname.rsplit('.', 1)[0], None)
                 if cls is not None:
