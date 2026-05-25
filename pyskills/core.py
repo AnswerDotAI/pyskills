@@ -17,6 +17,7 @@ from fastcore.xdg import *
 from importlib.metadata import entry_points
 from inspect import signature
 import importlib.util, types, inspect, collections, ast, site, shutil
+from fastaudit.core import track_call
 
 # %% ../nbs/00_core.ipynb #6dda45ba
 def ep_desc(ep):
@@ -38,11 +39,17 @@ def list_pyskills():
     return {ep.value: epd for ep in entry_points().select(group='pyskills')
         if (epd := ep_desc(ep)) is not None}
 
-# %% ../nbs/00_core.ipynb #e5adaf7a
-__pytools__ = collections.defaultdict(set)
-
 # %% ../nbs/00_core.ipynb #3c64526e
 _all_ = ['__pytools__']
+
+# %% ../nbs/00_core.ipynb #4e2a5e01
+__pytools__ = collections.defaultdict(set)
+
+def _set_wrapped(o, name, f=None):
+    try:
+        if f is None: f = getattr(o, name)
+        if callable(f): setattr(o, name, track_call(f))
+    except (AttributeError, TypeError): pass
 
 # %% ../nbs/00_core.ipynb #a7f5fc60
 def allow(*c, allow_policy=None): # Callable that raises if call not allowed
@@ -50,15 +57,23 @@ def allow(*c, allow_policy=None): # Callable that raises if call not allowed
     def _wrap(v):
         if allow_policy is None or v is ... or isinstance(v, tuple): return v
         return (v, allow_policy)
+    res = None
     for o in c:
         if isinstance(o, dict):
             for k,v in o.items():
-                if callable(k) and not isinstance(k, (type, types.ModuleType)): allow(k, allow_policy=v)
-                else: __pytools__[k].update(_wrap(x) for x in listify(v))
+                if callable(k) and not isinstance(k, (type, types.ModuleType)):
+                    allow(k, allow_policy=v)
+                    continue
+                vals = listify(v)
+                __pytools__[k].update(_wrap(x) for x in vals)
+                for x in vals:
+                    if isinstance(name := x[0] if isinstance(x, tuple) else x, str): _set_wrapped(k, name)
         else:
+            res = track_call(o) if callable(o) else o
             objclass = getattr(o, '__objclass__', None)
             if objclass is not None:
                 __pytools__[objclass].add(_wrap(o.__name__))
+                _set_wrapped(objclass, o.__name__, o)
                 continue
             qualname = getattr(o, '__qualname__', '') or ''
             mod = sys.modules.get(getattr(o, '__globals__', {}).get('__name__'
@@ -67,9 +82,11 @@ def allow(*c, allow_policy=None): # Callable that raises if call not allowed
                 cls = getattr(mod, qualname.rsplit('.', 1)[0], None)
                 if cls is not None:
                     __pytools__[cls].add(_wrap(o.__name__))
+                    _set_wrapped(cls, o.__name__, o)
                     continue
             __pytools__[mod].add(_wrap(o.__name__))
-    if len(c)==1 and callable(c[0]): return c[0]
+            _set_wrapped(mod, o.__name__, o)
+    if len(c)==1 and callable(c[0]): return res
 
 # %% ../nbs/00_core.ipynb #a3124a91
 def chk_dest(p, ok_dests):
