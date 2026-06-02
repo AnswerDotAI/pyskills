@@ -2,6 +2,15 @@
 
 <!-- do not remove -->
 
+## 0.0.9
+
+### New Features
+
+- Wrap allowed callables with fastaudit.core.`track_call` in `allow` ([#13](https://github.com/AnswerDotAI/pyskills/issues/13))
+- Refactor AllowPolicy to accept data dict instead of `ok_dests` parameter ([#12](https://github.com/AnswerDotAI/pyskills/issues/12))
+- Support per-callable allow policies in dict form and resolve module via `__globals__` ([#11](https://github.com/AnswerDotAI/pyskills/issues/11))
+
+
 ## 0.0.8
 
 ### Bugs Squashed
