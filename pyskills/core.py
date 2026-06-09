@@ -210,16 +210,6 @@ def _doc_class(sym):
     return parts[0] + '\n' + '\n'.join(parts[1:])
 
 
-# %% ../nbs/00_core.ipynb #8009e36f
-def _fmt_allows(mod):
-    src = inspect.getsource(mod)
-    tree = ast.parse(src)
-    lines = src.splitlines()
-    calls = [node for node in ast.walk(tree) if isinstance(node, ast.Expr)
-             and isinstance(node.value, ast.Call) and ast.unparse(node.value.func) == 'allow']
-    if not calls: return ''
-    return '\n## allows:\n' + '\n'.join(f'- {ast.unparse(node.value)}' for node in calls)
-
 # %% ../nbs/00_core.ipynb #b2b29e28
 def _doc_module(mod):
     parts = [f'# module {mod.__name__}:\n']
@@ -242,7 +232,6 @@ def _doc_module(mod):
     if typs: parts += ['\n## types:', *typs]
     if funcs: parts += ['\n## functions:', *funcs]
     if subs: parts += ['\n## submodules:', *subs]
-    parts.append(_fmt_allows(mod))
     return '\n'.join(parts)
 
 # %% ../nbs/00_core.ipynb #ccca39db
