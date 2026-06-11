@@ -195,14 +195,14 @@ def _xdir(sym):
     return [(n, getattr(sym, n, None)) for n in sorted(dir(sym)) if not n.startswith('_')]
 
 @allow
-def xdir(sym):
+def xdir(sym:str|object):
     "Filtered names for public symbols of a module or class (or anything with `__dir__`)"
     if isinstance(sym, str): sym = resolve(sym)
     return [o for o,_ in _xdir(sym)]
 
 # %% ../nbs/00_core.ipynb #15e66852
 @allow
-def doc(sym)->str:
+def doc(sym:str|object)->str:
     "Docstring of a module, class, function, instance or any other Python object."
     if isinstance(sym, str): sym = resolve(sym)
     if isinstance(sym, type): return _doc_class(sym)
@@ -275,7 +275,7 @@ def _doc_instance(sym, items):
 
 # %% ../nbs/00_core.ipynb #c22af8b2
 @allow
-def docfind(o, q, n=2, _pre=''):
+def docfind(o:str|object, q:str, n:int=2, _pre:str=''):
     "Search `doc()` recursively through `xdir(o)`, looking at submodules, classes, and functions, to depth `n`"
     pat = re.compile(q, re.IGNORECASE)
     res = []
