@@ -76,8 +76,9 @@ def allow(*c, allow_policy=None): # Callable that raises if call not allowed
                 _set_wrapped(objclass, o.__name__, o)
                 continue
             qualname = getattr(o, '__qualname__', '') or ''
-            mod = sys.modules.get(getattr(o, '__globals__', {}).get('__name__'
-                ) or getattr(o, '__module__', '__main__'), sys.modules.get('__main__'))
+            ow = inspect.unwrap(o) if callable(o) else o
+            mod = sys.modules.get(getattr(ow, '__globals__', {}).get('__name__'
+                ) or getattr(ow, '__module__', '__main__'), sys.modules.get('__main__'))
             if '.' in qualname:
                 cls = getattr(mod, qualname.rsplit('.', 1)[0], None)
                 if cls is not None:
