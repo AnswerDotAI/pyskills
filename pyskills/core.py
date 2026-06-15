@@ -16,7 +16,7 @@ from fastcore.docments import MarkdownRenderer,can_render
 from fastcore.xdg import *
 from importlib.metadata import entry_points
 from inspect import signature
-import builtins, importlib.util, types, inspect, collections, ast, site, shutil, sys
+import builtins, importlib.util, types, inspect, collections, ast, site, shutil, sys, typing
 from fastaudit.core import track_call
 
 # %% ../nbs/00_core.ipynb #6dda45ba
@@ -220,7 +220,16 @@ class _N:
     def __init__(self,s): self.s=s
     def __repr__(self): return self.s
 
-def _ann(a): return _N(a.__name__) if isinstance(a,type) and a is not inspect._empty else a
+def _fmt_ann(a):
+    if a is inspect._empty: return a
+    if isinstance(a, type): return a.__name__
+    o,args = typing.get_origin(a),typing.get_args(a)
+    if o is None: return getattr(a, '__name__', None) or str(a)
+    if o in (types.UnionType, typing.Union): return ' | '.join(_fmt_ann(x) for x in args)
+    on = getattr(o, '__name__', None) or str(o)
+    return f"{on}[{', '.join(_fmt_ann(x) for x in args)}]"
+
+def _ann(a): return _N(_fmt_ann(a)) if a is not inspect._empty else a
 
 def fmt_sig(f):
     try: s = signature(f)
