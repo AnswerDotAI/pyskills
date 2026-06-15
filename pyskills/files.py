@@ -28,8 +28,8 @@ def file_view(
     if not lines: return ''
     if endline is None: endline = len(lines)
     if endline < 0: endline = len(lines)+endline+1
-    if not (1 <= startline <= len(lines)): return f'error: Invalid startline {startline}. Valid range: 1-{len(lines)}'
-    if not (startline <= endline <= len(lines)): return f'error: Invalid endline {endline}. Valid range: {startline}-{len(lines)}'
+    startline = min(max(1, startline), len(lines))
+    endline = max(startline, min(endline, len(lines)))
     return '\n'.join(f'{i}: {l}' for i,l in enumerate(lines[startline-1:endline], startline))
 
 # %% ../nbs/01_files.ipynb #106c65e3
