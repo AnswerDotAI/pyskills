@@ -6,8 +6,8 @@ Docs: https://AnswerDotAI.github.io/pyskillscore.html.md"""
 
 # %% auto #0
 __all__ = ['ep_desc', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosAllowPolicy', 'PathWritePolicy', 'OpenWritePolicy',
-           'SymbolNotFound', 'resolve', 'xdir', 'doc', 'docfind', 'pyskills_dir', 'ensure_pyskills_dir', 'clear_mod',
-           'enable_pyskill', 'register_pyskill', 'disable_pyskill', 'delete_pyskill', '__pytools__']
+           'SymbolNotFound', 'resolve', 'xdir', 'doc', 'fmt_sig', 'docfind', 'pyskills_dir', 'ensure_pyskills_dir',
+           'clear_mod', 'enable_pyskill', 'register_pyskill', 'disable_pyskill', 'delete_pyskill', '__pytools__']
 
 # %% ../nbs/00_core.ipynb #38e384dc
 from fastcore.utils import *
@@ -215,10 +215,22 @@ def doc(sym:str|object)->str:
     if '__repr__' in type(sym).__dict__: return repr(sym)
     return Safe(MarkdownRenderer(sym))
 
+# %% ../nbs/00_core.ipynb #90aae7aa
+class _N:
+    def __init__(self,s): self.s=s
+    def __repr__(self): return self.s
+
+def _ann(a): return _N(a.__name__) if isinstance(a,type) and a is not inspect._empty else a
+
+def fmt_sig(f):
+    try: s = signature(f)
+    except (ValueError, TypeError): return '(...)'
+    ps = [p.replace(annotation=_ann(p.annotation)) for p in s.parameters.values()]
+    return str(s.replace(parameters=ps, return_annotation=_ann(s.return_annotation)))
+
 # %% ../nbs/00_core.ipynb #ae0c509a
 def _fmt_method(name, method, prefix=''):
-    try: sig = str(signature(method))
-    except (ValueError, TypeError): sig = '(...)'
+    sig = fmt_sig(method)
     d = getattr(method, '__doc__', None)
     res = f'    {prefix}def {name}{sig}: ...'
     if d and name != '__init__': res += f'  # {d.splitlines()[0].strip()}'
@@ -236,7 +248,6 @@ def _doc_class(sym):
     if d: parts.insert(1, '    """' + inspect.cleandoc(d).replace('\n', '\n    ') + '"""')
     return parts[0] + '\n' + '\n'.join(parts[1:])
 
-
 # %% ../nbs/00_core.ipynb #b2b29e28
 def _doc_module(mod):
     parts = [f'# module {mod.__name__}:\n']
@@ -253,9 +264,8 @@ def _doc_module(mod):
             base_str = f'({bases})' if bases else ''
             typs.append(f'- class {name}{base_str}{comment}')
         elif callable(obj):
-            try: sig = str(signature(obj))
-            except (ValueError, TypeError): sig = '(...)'
-            funcs.append(f'- {'async def' if inspect.iscoroutinefunction(obj) else 'def'} {name}{sig}{comment}')
+            pre = 'async def' if inspect.iscoroutinefunction(obj) else 'def'
+            funcs.append(f'- {pre} {name}{fmt_sig(obj)}{comment}')
     if typs: parts += ['\n## types:', *typs]
     if funcs: parts += ['\n## functions:', *funcs]
     if subs: parts += ['\n## submodules:', *subs]
