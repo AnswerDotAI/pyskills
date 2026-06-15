@@ -6,8 +6,8 @@ Docs: https://AnswerDotAI.github.io/pyskillscore.html.md"""
 
 # %% auto #0
 __all__ = ['ep_desc', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosAllowPolicy', 'PathWritePolicy', 'OpenWritePolicy',
-           'xdir', 'doc', 'docfind', 'pyskills_dir', 'ensure_pyskills_dir', 'clear_mod', 'enable_pyskill',
-           'register_pyskill', 'disable_pyskill', 'delete_pyskill', '__pytools__']
+           'SymbolNotFound', 'resolve', 'xdir', 'doc', 'docfind', 'pyskills_dir', 'ensure_pyskills_dir', 'clear_mod',
+           'enable_pyskill', 'register_pyskill', 'disable_pyskill', 'delete_pyskill', '__pytools__']
 
 # %% ../nbs/00_core.ipynb #38e384dc
 from fastcore.utils import *
@@ -16,7 +16,7 @@ from fastcore.docments import MarkdownRenderer,can_render
 from fastcore.xdg import *
 from importlib.metadata import entry_points
 from inspect import signature
-import importlib.util, types, inspect, collections, ast, site, shutil
+import builtins, importlib.util, types, inspect, collections, ast, site, shutil, sys
 from fastaudit.core import track_call
 
 # %% ../nbs/00_core.ipynb #6dda45ba
@@ -123,6 +123,29 @@ class OpenWritePolicy(AllowPolicy):
         if any(c in mode for c in 'wax+'): chk_dest(args[0] if args else kwargs.get('file'), data['ok_dests'])
 
 
+# %% ../nbs/00_core.ipynb #533a79ab
+class SymbolNotFound(Exception):
+    def __repr__(self): return f"SymbolNotFound({self.args[0]})"
+    __str__ = __repr__
+
+def resolve(
+    sym:str,  # Dotted symbol path, with optional [n] indexing, e.g. "module.attr.subattr[1]"
+):
+    "Resolve a dotted symbol string to its Python object, with optional [n] indexing"
+    sym = sym.strip()
+    ns = vars(sys.modules['__main__'])
+    obj = None
+    for i,part in enumerate(re.split(r'\.(?![^\[]*\])', sym)):
+        name,idx = re.match(r'(\w+)(?:\[(\d+)\])?$', part).groups()
+        if i==0:
+            if name in ns: obj = ns[name]
+            else:
+                try: obj = getattr(builtins, name)
+                except AttributeError: raise SymbolNotFound(f"Symbol '{name}' not found.")
+        else: obj = getattr(obj, name)
+        if idx is not None: obj = obj[int(idx)]
+    return obj
+
 # %% ../nbs/00_core.ipynb #c21d33bf
 def _is_own(sym, n):
     "Whether name `n` in module `sym` is an owned symbol or sibling submodule"
@@ -173,13 +196,16 @@ def _xdir(sym):
     return [(n, getattr(sym, n, None)) for n in sorted(dir(sym)) if not n.startswith('_')]
 
 @allow
-def xdir(sym):
+def xdir(sym:str|object):
     "Filtered names for public symbols of a module or class (or anything with `__dir__`)"
+    if isinstance(sym, str): sym = resolve(sym)
     return [o for o,_ in _xdir(sym)]
 
 # %% ../nbs/00_core.ipynb #15e66852
 @allow
-def doc(sym)->str:
+def doc(sym:str|object)->str:
+    "Docstring of a module, class, function, instance or any other Python object."
+    if isinstance(sym, str): sym = resolve(sym)
     if isinstance(sym, type): return _doc_class(sym)
     if isinstance(sym, types.ModuleType): return _doc_module(sym)
     if hasattr(sym, '_repr_markdown_'): return sym._repr_markdown_()
@@ -250,10 +276,11 @@ def _doc_instance(sym, items):
 
 # %% ../nbs/00_core.ipynb #c22af8b2
 @allow
-def docfind(o, q, n=2, _pre=''):
+def docfind(o:str|object, q:str, n:int=2, _pre:str=''):
     "Search `doc()` recursively through `xdir(o)`, looking at submodules, classes, and functions, to depth `n`"
     pat = re.compile(q, re.IGNORECASE)
     res = []
+    if isinstance(o, str): o = resolve(o)
     try: d = doc(o) or ''
     except: d = ''
     if pat.search(d): res.append(_pre + ' // ' + d.split('\n')[0])
