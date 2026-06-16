@@ -6,17 +6,16 @@ Docs: https://AnswerDotAI.github.io/pyskillscore.html.md"""
 
 # %% auto #0
 __all__ = ['ep_desc', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosAllowPolicy', 'PathWritePolicy', 'OpenWritePolicy',
-           'SymbolNotFound', 'resolve', 'xdir', 'doc', 'docfind', 'pyskills_dir', 'ensure_pyskills_dir', 'clear_mod',
-           'enable_pyskill', 'register_pyskill', 'disable_pyskill', 'delete_pyskill', '__pytools__']
+           'SymbolNotFound', 'resolve', 'xdir', 'doc', 'fmt_sig', 'docfind', 'pyskills_dir', 'ensure_pyskills_dir',
+           'clear_mod', 'enable_pyskill', 'register_pyskill', 'disable_pyskill', 'delete_pyskill', '__pytools__']
 
 # %% ../nbs/00_core.ipynb #38e384dc
 from fastcore.utils import *
-from fastcore.xml import Safe
 from fastcore.docments import MarkdownRenderer,can_render
 from fastcore.xdg import *
 from importlib.metadata import entry_points
 from inspect import signature
-import builtins, importlib.util, types, inspect, collections, ast, site, shutil, sys
+import builtins, importlib.util, types, inspect, collections, ast, site, shutil, sys, typing
 from fastaudit.core import track_call
 
 # %% ../nbs/00_core.ipynb #6dda45ba
@@ -129,13 +128,13 @@ class SymbolNotFound(Exception):
     __str__ = __repr__
 
 def resolve(
-    sym:str,  # Dotted symbol path, with optional [n] indexing, e.g. "module.attr.subattr[1]"
+    sym_nm:str,  # Dotted symbol path, with optional [n] indexing, e.g. "module.attr.subattr[1]"
 ):
     "Resolve a dotted symbol string to its Python object, with optional [n] indexing"
-    sym = sym.strip()
+    if not isinstance(sym_nm, str): return sym_nm
     ns = vars(sys.modules['__main__'])
     obj = None
-    for i,part in enumerate(re.split(r'\.(?![^\[]*\])', sym)):
+    for i,part in enumerate(re.split(r'\.(?![^\[]*\])', sym_nm.strip())):
         name,idx = re.match(r'(\w+)(?:\[(\d+)\])?$', part).groups()
         if i==0:
             if name in ns: obj = ns[name]
@@ -208,17 +207,38 @@ def doc(sym:str|object)->str:
     if isinstance(sym, str): sym = resolve(sym)
     if isinstance(sym, type): return _doc_class(sym)
     if isinstance(sym, types.ModuleType): return _doc_module(sym)
-    if hasattr(sym, '_repr_markdown_'): return sym._repr_markdown_()
-    if callable(sym) and can_render(sym): return Safe(MarkdownRenderer(sym))
+    if hasattr(sym, '_repr_markdown_'): return PrettyString(sym._repr_markdown_())
+    if callable(sym) and can_render(sym): return PrettyString(MarkdownRenderer(sym))
     if (items := _xdir(sym)): return _doc_instance(sym, items)
     if '__str__' in type(sym).__dict__: return str(sym)
     if '__repr__' in type(sym).__dict__: return repr(sym)
-    return Safe(MarkdownRenderer(sym))
+    return PrettyString(MarkdownRenderer(sym))
+
+# %% ../nbs/00_core.ipynb #90aae7aa
+class _N:
+    def __init__(self,s): self.s=s
+    def __repr__(self): return self.s
+
+def _fmt_ann(a):
+    if a is inspect._empty: return a
+    if isinstance(a, type): return a.__name__
+    o,args = typing.get_origin(a),typing.get_args(a)
+    if o is None: return getattr(a, '__name__', None) or str(a)
+    if o in (types.UnionType, typing.Union): return ' | '.join(_fmt_ann(x) for x in args)
+    on = getattr(o, '__name__', None) or str(o)
+    return f"{on}[{', '.join(_fmt_ann(x) for x in args)}]"
+
+def _ann(a): return _N(_fmt_ann(a)) if a is not inspect._empty else a
+
+def fmt_sig(f):
+    try: s = signature(f)
+    except (ValueError, TypeError): return '(...)'
+    ps = [p.replace(annotation=_ann(p.annotation)) for p in s.parameters.values()]
+    return str(s.replace(parameters=ps, return_annotation=_ann(s.return_annotation)))
 
 # %% ../nbs/00_core.ipynb #ae0c509a
 def _fmt_method(name, method, prefix=''):
-    try: sig = str(signature(method))
-    except (ValueError, TypeError): sig = '(...)'
+    sig = fmt_sig(method)
     d = getattr(method, '__doc__', None)
     res = f'    {prefix}def {name}{sig}: ...'
     if d and name != '__init__': res += f'  # {d.splitlines()[0].strip()}'
@@ -234,8 +254,7 @@ def _doc_class(sym):
         elif callable(raw): parts.append(_fmt_method(name, raw))
     d = sym.__doc__ or (getattr(sym, '__init__', None) and sym.__init__.__doc__)
     if d: parts.insert(1, '    """' + inspect.cleandoc(d).replace('\n', '\n    ') + '"""')
-    return parts[0] + '\n' + '\n'.join(parts[1:])
-
+    return PrettyString(parts[0] + '\n' + '\n'.join(parts[1:]))
 
 # %% ../nbs/00_core.ipynb #b2b29e28
 def _doc_module(mod):
@@ -253,13 +272,12 @@ def _doc_module(mod):
             base_str = f'({bases})' if bases else ''
             typs.append(f'- class {name}{base_str}{comment}')
         elif callable(obj):
-            try: sig = str(signature(obj))
-            except (ValueError, TypeError): sig = '(...)'
-            funcs.append(f'- {'async def' if inspect.iscoroutinefunction(obj) else 'def'} {name}{sig}{comment}')
+            pre = 'async def' if inspect.iscoroutinefunction(obj) else 'def'
+            funcs.append(f'- {pre} {name}{fmt_sig(obj)}{comment}')
     if typs: parts += ['\n## types:', *typs]
     if funcs: parts += ['\n## functions:', *funcs]
     if subs: parts += ['\n## submodules:', *subs]
-    return '\n'.join(parts)
+    return PrettyString('\n'.join(parts))
 
 # %% ../nbs/00_core.ipynb #ccca39db
 def _doc_instance(sym, items):
@@ -272,7 +290,7 @@ def _doc_instance(sym, items):
             except (ValueError, TypeError): sig = '(...)'
             parts.append(f'- {name}{sig}{comment}')
         else: parts.append(f'- {name}: {type(obj).__name__} = {repr(obj)[:80]}')
-    return '\n'.join(parts)
+    return PrettyString('\n'.join(parts))
 
 # %% ../nbs/00_core.ipynb #c22af8b2
 @allow

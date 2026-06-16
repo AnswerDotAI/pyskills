@@ -2,6 +2,17 @@
 
 <!-- do not remove -->
 
+## 0.0.10
+
+### New Features
+
+- Use PrettyString ([#21](https://github.com/AnswerDotAI/pyskills/issues/21))
+- Add `fmt_sig` helper to strip module names from signature annotations ([#20](https://github.com/AnswerDotAI/pyskills/issues/20))
+- Split file search/create/view into new pyskills.files module ([#17](https://github.com/AnswerDotAI/pyskills/issues/17))
+- resolve symbol strings in xdir, doc, and docfind ([#15](https://github.com/AnswerDotAI/pyskills/pull/15)), thanks to [@ncoop57](https://github.com/ncoop57)
+- Split out ipynb; remove unneeded async ([#14](https://github.com/AnswerDotAI/pyskills/issues/14))
+
+
 ## 0.0.9
 
 ### New Features
