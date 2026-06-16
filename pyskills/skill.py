@@ -9,19 +9,11 @@ Call `list_pyskills()` to get a `{module: description}` dict of all registered p
 Use standard Python import, then `doc()` to inspect at increasing detail:
 
     import pyskills.skill
-    doc(pyskills.skill)        # module overview: classes, functions, submodules, and allows
+    doc(pyskills.skill)        # module overview: classes, functions, submodules
     doc(SkillTestClass)        # class detail: bases, __init__, methods, properties
     doc(skill_test_func)       # function detail: full signature with docments
 
 NB: `doc()` works on *all* python modules, not only pyskills. The only thing that's special about pyskills is the entrypoint registration that makes them appear in `list_pyskills()`; they can cross-reference other modules that may not be listed, but can still be imported and `doc()` run.
-
-## Permissions
-
-The module-level `doc()` output ends with an `allows:` section listing exactly which functions and classes you may call. Calling anything not listed will raise an error. The allows notation:
-
-- `allow(func, func2)` : `func` and `func2` are callable
-- `allow({SomeClass: ['method1', 'method2']})` : those specific methods of SomeClass
-- `allow({SomeClass: ...})` : all public methods of `SomeClass`
 
 ## Testing
 
