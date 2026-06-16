@@ -128,13 +128,13 @@ class SymbolNotFound(Exception):
     __str__ = __repr__
 
 def resolve(
-    sym:str,  # Dotted symbol path, with optional [n] indexing, e.g. "module.attr.subattr[1]"
+    sym_nm:str,  # Dotted symbol path, with optional [n] indexing, e.g. "module.attr.subattr[1]"
 ):
     "Resolve a dotted symbol string to its Python object, with optional [n] indexing"
-    sym = sym.strip()
+    if not isinstance(sym_nm, str): return sym_nm
     ns = vars(sys.modules['__main__'])
     obj = None
-    for i,part in enumerate(re.split(r'\.(?![^\[]*\])', sym)):
+    for i,part in enumerate(re.split(r'\.(?![^\[]*\])', sym_nm.strip())):
         name,idx = re.match(r'(\w+)(?:\[(\d+)\])?$', part).groups()
         if i==0:
             if name in ns: obj = ns[name]

@@ -25,6 +25,7 @@ Documentation = "https://AnswerDotAI.github.io/pyskills/"
 "pyskills.skill" = "pyskills.skill"
 "pyskills.edit" = "pyskills.edit"
 "pyskills.files" = "pyskills.files"
+"pyskills.ipynb" = "pyskills.ipynb"
 
 [project.entry-points.nbdev]
 pyskills = "pyskills._modidx:d"
