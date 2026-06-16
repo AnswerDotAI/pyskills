@@ -11,7 +11,6 @@ __all__ = ['ep_desc', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosA
 
 # %% ../nbs/00_core.ipynb #38e384dc
 from fastcore.utils import *
-from fastcore.xml import Safe
 from fastcore.docments import MarkdownRenderer,can_render
 from fastcore.xdg import *
 from importlib.metadata import entry_points
@@ -208,12 +207,12 @@ def doc(sym:str|object)->str:
     if isinstance(sym, str): sym = resolve(sym)
     if isinstance(sym, type): return _doc_class(sym)
     if isinstance(sym, types.ModuleType): return _doc_module(sym)
-    if hasattr(sym, '_repr_markdown_'): return sym._repr_markdown_()
-    if callable(sym) and can_render(sym): return Safe(MarkdownRenderer(sym))
+    if hasattr(sym, '_repr_markdown_'): return PrettyString(sym._repr_markdown_())
+    if callable(sym) and can_render(sym): return PrettyString(MarkdownRenderer(sym))
     if (items := _xdir(sym)): return _doc_instance(sym, items)
     if '__str__' in type(sym).__dict__: return str(sym)
     if '__repr__' in type(sym).__dict__: return repr(sym)
-    return Safe(MarkdownRenderer(sym))
+    return PrettyString(MarkdownRenderer(sym))
 
 # %% ../nbs/00_core.ipynb #90aae7aa
 class _N:
@@ -255,7 +254,7 @@ def _doc_class(sym):
         elif callable(raw): parts.append(_fmt_method(name, raw))
     d = sym.__doc__ or (getattr(sym, '__init__', None) and sym.__init__.__doc__)
     if d: parts.insert(1, '    """' + inspect.cleandoc(d).replace('\n', '\n    ') + '"""')
-    return parts[0] + '\n' + '\n'.join(parts[1:])
+    return PrettyString(parts[0] + '\n' + '\n'.join(parts[1:]))
 
 # %% ../nbs/00_core.ipynb #b2b29e28
 def _doc_module(mod):
@@ -278,7 +277,7 @@ def _doc_module(mod):
     if typs: parts += ['\n## types:', *typs]
     if funcs: parts += ['\n## functions:', *funcs]
     if subs: parts += ['\n## submodules:', *subs]
-    return '\n'.join(parts)
+    return PrettyString('\n'.join(parts))
 
 # %% ../nbs/00_core.ipynb #ccca39db
 def _doc_instance(sym, items):
@@ -291,7 +290,7 @@ def _doc_instance(sym, items):
             except (ValueError, TypeError): sig = '(...)'
             parts.append(f'- {name}{sig}{comment}')
         else: parts.append(f'- {name}: {type(obj).__name__} = {repr(obj)[:80]}')
-    return '\n'.join(parts)
+    return PrettyString('\n'.join(parts))
 
 # %% ../nbs/00_core.ipynb #c22af8b2
 @allow
