@@ -1,5 +1,6 @@
 _docs/
 _proc/
+_modidx.py
 
 *.bak
 .gitattributes
