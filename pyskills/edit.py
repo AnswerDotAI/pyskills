@@ -164,10 +164,3 @@ def del_lines(
     return ''.join(lines)
 
 file_del_lines = file_edit(del_lines, 'file_del_lines')
-
-# %% ../nbs/03_edit.ipynb #f6c19c0d
-from .core import PosAllowPolicy,AllowPolicy,allow
-
-# %% ../nbs/03_edit.ipynb #0af37e32
-_wp = PosAllowPolicy(0)
-allow(file_insert_line, file_str_replace, file_strs_replace, file_replace_lines, file_del_lines, allow_policy=_wp)

@@ -124,10 +124,3 @@ def grep_files(
     pat = re.compile(content_re) if content_re else None
     fs = find_files(path, **kwargs)
     return [l for f in fs for l in _grep_file(f, pat, content_str, after, before, context, nums)]
-
-# %% ../nbs/01_files.ipynb #2b2bd5cf
-from .core import PosAllowPolicy,AllowPolicy,allow
-
-# %% ../nbs/01_files.ipynb #85a6e0cf
-_wp = PosAllowPolicy(0)
-allow(file_create, allow_policy=_wp);

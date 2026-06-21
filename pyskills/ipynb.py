@@ -88,21 +88,3 @@ def view_nb(fname:str, incl_out:bool=False):
     "Show notebook source as concise xml, optionally including output if `incl_out`"
     nb = Notebook.open(fname)
     return repr(nb) if incl_out else nb.concise
-
-# %% ../nbs/02_ipynb.ipynb #f6c19c0d
-from .core import PosAllowPolicy,AllowPolicy,allow
-
-# %% ../nbs/02_ipynb.ipynb #0af37e32
-_wp = PosAllowPolicy(0)
-allow(cell_insert_line, cell_str_replace, cell_strs_replace, cell_replace_lines, cell_del_lines, allow_policy=_wp)
-allow(view_cell, view_nb)
-
-# %% ../nbs/02_ipynb.ipynb #1b4483f2
-class _NbWritePolicy(AllowPolicy):
-    "Check Notebook.path and optional path arg"
-    def __call__(self, obj, args, kwargs, ok_dests):
-        p = kwargs.get('path', args[0] if args else None) or obj.path
-        if p is not None: chk_dest(p, ok_dests)
-
-allow({Notebook: ['open', 'find', 'view', 'add', 'md', 'move']})
-allow({Notebook: [('save', _NbWritePolicy())]})

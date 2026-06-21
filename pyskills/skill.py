@@ -28,7 +28,6 @@ This module includes a test class and function to verify the system works:
 `from pyskills import createskill; doc(createskill)` for how to build and register your own pyskill modules, including the allow/policy system.
 """
 
-from pyskills.core import allow
 # inspect is unused - imported to show that non-owned submodules aren't listed in doc/xdir
 import pyskills.createskill, inspect
 
@@ -59,6 +58,3 @@ async def async_skill_test_func(
 )->str: # the output
     "A test function"
     return f"You call me with the arg: {x}"
-
-allow(skill_test_func, async_skill_test_func, SkillTestClass)
-
