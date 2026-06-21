@@ -62,7 +62,7 @@ def _load_gitignore(root='.'):
     ls = [l.strip() for l in gi.splitlines() if l.strip() and not l.startswith(('#','!'))]
     folders = ['.git'] + [l.rstrip('/') for l in ls]
     files = [l for l in ls if not l.endswith('/')]
-    mk = lambda ps: re.compile('|'.join(translate(o) for o in ps)) if ps else None
+    mk = lambda ps: re.compile("|".join("^(?:.*/)?"+translate(o) for o in ps)) if ps else None
     return mk(files),mk(folders)
 
 # %% ../nbs/01_files.ipynb #473656ac
