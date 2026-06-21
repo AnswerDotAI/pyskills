@@ -17,6 +17,9 @@ classifiers = [
 ]
 dependencies = ['fastaudit', 'fastcore>=1.12.33']
 
+[project.optional-dependencies]
+dev = ['httpx']
+
 [project.urls]
 Repository = "https://github.com/AnswerDotAI/pyskills"
 Documentation = "https://AnswerDotAI.github.io/pyskills/"
