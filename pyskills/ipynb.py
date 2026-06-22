@@ -1,4 +1,4 @@
-"""Functions for view/modifying ipynb file notebook cells. Each operation returns unified diffs showing what changed, or `"none: No changes."`, or `"error: ..."`.
+"""Functions for view/modifying ipynb file notebook cells. Each operation returns unified diffs showing what changed.
 
 ## Ipynb file cell editing
 

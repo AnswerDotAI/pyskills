@@ -1,4 +1,4 @@
-"""Functions for creating, viewing, and modifying files. Each editing operation returns unified diffs showing what changed, or `"none: No changes."`, or `"error: ..."`.
+"""Functions for creating, viewing, and modifying files. Each editing operation returns unified diffs showing what changed.
 
 ## File viewing, creating, and editing
 
