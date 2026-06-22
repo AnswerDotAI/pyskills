@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.11
+
+### New Features
+
+- Remove pyskills.files module and simplify edit/ipynb docstrings ([#26](https://github.com/AnswerDotAI/pyskills/issues/26))
+- clamp `file_view` endline ([#23](https://github.com/AnswerDotAI/pyskills/issues/23))
+
+
 ## 0.0.10
 
 ### New Features
