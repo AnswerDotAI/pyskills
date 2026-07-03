@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.12
+
+### New Features
+
+- Add `add_cell` and `del_cells` notebook editing functions ([#27](https://github.com/AnswerDotAI/pyskills/issues/27))
+
+
 ## 0.0.11
 
 ### New Features
