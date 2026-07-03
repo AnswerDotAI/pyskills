@@ -60,6 +60,7 @@ d = { 'settings': { 'branch': 'main',
             'pyskills.ipynb': { 'pyskills.ipynb._cell_edit': ('ipynb.html#_cell_edit', 'pyskills/ipynb.py'),
                                 'pyskills.ipynb.add_cell': ('ipynb.html#add_cell', 'pyskills/ipynb.py'),
                                 'pyskills.ipynb.del_cells': ('ipynb.html#del_cells', 'pyskills/ipynb.py'),
+                                'pyskills.ipynb.summary_nb': ('ipynb.html#summary_nb', 'pyskills/ipynb.py'),
                                 'pyskills.ipynb.view_cell': ('ipynb.html#view_cell', 'pyskills/ipynb.py'),
                                 'pyskills.ipynb.view_nb': ('ipynb.html#view_nb', 'pyskills/ipynb.py')},
             'pyskills.skill': {}}}

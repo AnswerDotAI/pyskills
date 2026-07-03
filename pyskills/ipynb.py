@@ -7,7 +7,7 @@ Cell tools take an ipynb path and a cell id, e.g:
 cell_replace_lines('nb.ipynb', cell_id, 2, 3, 'replaced')
 cell_insert_line('nb.ipynb', cell_id, 0, 'first line')
 
-Use `view_nb` to view the whole notebook. Use `view_cell` to see a cell's source with line numbers before editing. Use `add_cell` to insert a new cell before/after an existing cell id, and `del_cells` to delete cells.
+Use `summary_nb` for a one-line-per-cell overview of a large notebook, and `view_nb` to view the whole notebook. Use `view_cell` to see a cell's source with line numbers before editing. Use `add_cell` to insert a new cell before/after an existing cell id, and `del_cells` to delete cells.
 
 ## Line filtering
 
@@ -19,7 +19,7 @@ Docs: https://AnswerDotAI.github.io/pyskills/ipynb.html.md"""
 
 # %% auto #0
 __all__ = ['cell_insert_line', 'cell_str_replace', 'cell_strs_replace', 'cell_replace_lines', 'cell_del_lines', 'add_cell',
-           'del_cells', 'view_cell', 'view_nb']
+           'del_cells', 'view_cell', 'view_nb', 'summary_nb']
 
 # %% ../nbs/02_ipynb.ipynb #fed1068a
 import difflib,re
@@ -27,6 +27,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from fastcore.meta import splice_sig
+from fastcore.xtras import truncstr
 from .edit import *
 
 # %% ../nbs/02_ipynb.ipynb #005ca01f
@@ -111,3 +112,10 @@ def view_nb(fname:str, incl_out:bool=False):
     "Show notebook source as concise xml, optionally including output if `incl_out`"
     nb = Notebook.open(fname)
     return repr(nb) if incl_out else nb.concise
+
+# %% ../nbs/02_ipynb.ipynb #3988c2e4
+def summary_nb(fname:str,      # ipynb to summarize
+               maxlen:int=120): # truncate each cell's source to this
+    "One line per cell: id, type, and truncated/escaped source"
+    def _l(c): return f"{c.id}:{c.cell_type[0]}:{truncstr(c.source.replace(chr(10), r'\n'), maxlen)}"
+    return '\n'.join(_l(c) for c in Notebook.open(fname).cells)
