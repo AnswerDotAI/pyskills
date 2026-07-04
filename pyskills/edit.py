@@ -1,4 +1,4 @@
-"""Functions for creating, viewing, and modifying files. Each editing operation returns unified diffs showing what changed.
+"""Functions for creating, viewing, and modifying files. Each editing operation returns unified diffs showing what changed. Where the `exhash` pyskill is available, prefer it for editing: its hash-verified addressing fails loudly on stale context instead of editing nearby text.
 
 ## File viewing, creating, and editing
 
@@ -87,7 +87,7 @@ def file_edit(f, name=None):
 # %% ../nbs/01_edit.ipynb #b694c73a
 def insert_line(
     text:str,
-    insert_line:int, # The 1-based line number after which to insert the text (0: before 1st line, n>=1: after nth line)
+    insert_line:int, # The 1-based line number after which to insert the text (0: before 1st line, 1: after 1st line, 2: after 2nd, etc.)
     new_str:str, # The text to insert
 ):
     "Insert new_str at specified line number"
@@ -108,9 +108,14 @@ def str_replace(
     n_matches:int=None, # Max replacements (None=all)
     re_filter:str=None, # If provided, only process lines matching this regex (like g// in ex)
     invert_filter:bool=False, # Invert the filter (like g!// in ex)
+    use_regex:bool=False, # Treat old_str as a regex, and new_str as an `re.sub` template?
 ):
     "Replace occurrence(s) of old_str with new_str"
+    pat = re.compile(old_str) if use_regex else None
     def _repl(s, label=''):
+        if pat:
+            if not pat.search(s): raise ValueError(f"Text not found{label}: {repr(old_str)}")
+            return pat.sub(new_str, s, count=n_matches or 0)
         if s.count(old_str) == 0: raise ValueError(f"Text not found{label}: {repr(old_str)}")
         return s.replace(old_str, new_str) if n_matches is None else s.replace(old_str, new_str, n_matches)
     if re_filter or start_line or end_line:
@@ -136,6 +141,7 @@ def strs_replace(
     n_matches:int=None, # Max replacements per string (None=all)
     re_filter:str=None, # If provided, only process lines matching this regex (like g// in ex)
     invert_filter:bool=False, # Invert the filter (like g!// in ex)
+    use_regex:bool=False, # Treat old_strs as regexes, and new_strs as `re.sub` templates?
 ):
     "Replace multiple strings simultaneously"
     if not isinstance(old_strs, list): raise ValueError(f"`old_strs` should be a list[str] but got {type(old_strs)}")
@@ -143,7 +149,7 @@ def strs_replace(
     if len(old_strs) != len(new_strs): raise ValueError(f"Length mismatch: {len(old_strs)} old_strs vs {len(new_strs)} new_strs")
     for idx,(old_str,new_str) in enumerate(zip(old_strs, new_strs)):
         text = str_replace(text, old_str, new_str, start_line=start_line, end_line=end_line,
-                            n_matches=n_matches, re_filter=re_filter, invert_filter=invert_filter)
+                            n_matches=n_matches, re_filter=re_filter, invert_filter=invert_filter, use_regex=use_regex)
     return text
 
 file_strs_replace = file_edit(strs_replace, 'file_strs_replace')
