@@ -6,7 +6,7 @@ A pyskill is a standard Python module that registers itself via entry points so 
 
 Your module needs:
 - A docstring: first paragraph is the short description shown during discovery; the rest is read by the LLM after loading.
-- `__all__` (optional): if provided, `doc()` and `xdir()` show exactly these symbols. Otherwise they fall back to non-private names defined in the module (not just imported), plus explicitly imported sibling submodules.
+- `__all__` (optional): if provided, `doc()` and `xdir()` show exactly these symbols. Otherwise they fall back to non-private names defined in the module (not just imported), plus explicitly imported sibling submodules. Curate this carefully: consumers are told to `import *` from pyskill modules, so it defines your public API.
 
 ## 2. Register via entry point
 

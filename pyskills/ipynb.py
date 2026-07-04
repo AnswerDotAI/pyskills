@@ -7,7 +7,7 @@ Cell tools take an ipynb path and a cell id, e.g:
 cell_replace_lines('nb.ipynb', cell_id, 2, 3, 'replaced')
 cell_insert_line('nb.ipynb', cell_id, 0, 'first line')
 
-Use `summary_nb` for a one-line-per-cell overview of a large notebook, and `view_nb` to view the whole notebook (pass `only_errors=True` after running tests to jump straight to the cells that errored, with their tracebacks). Use `view_cell` to see a cell's source with line numbers before editing. Use `add_cell` to insert a new cell before/after an existing cell id, and `del_cells` to delete cells.
+Use `summary_nb` for a one-line-per-cell overview of a large notebook, and `view_nb` to view the whole notebook (pass `only_errors=True` after running tests to jump straight to the cells that errored, with their tracebacks). Use `view_cell` to see a cell's source with line numbers before editing (`view_range` limits it to a line range). Use `find_cells` to search a notebook by regex, cell type, error state, or nbdev export directive (with grep-style `before`/`after`/`context` neighbors), to get a headers-only outline, or to pull out one `header_section` with its child cells. When outputs are included they are middle-truncated by default (`trunc_out`), but error outputs never are. Use `add_cell` to insert a new cell before/after an existing cell id, and `del_cells` to delete cells.
 
 ## Line filtering
 
@@ -19,7 +19,7 @@ Docs: https://AnswerDotAI.github.io/pyskills/ipynb.html.md"""
 
 # %% auto #0
 __all__ = ['cell_insert_line', 'cell_str_replace', 'cell_strs_replace', 'cell_replace_lines', 'cell_del_lines', 'add_cell',
-           'del_cells', 'copy_cells', 'cut_cells', 'paste_cells', 'view_cell', 'view_nb', 'summary_nb']
+           'del_cells', 'copy_cells', 'cut_cells', 'paste_cells', 'view_cell', 'view_nb', 'summary_nb', 'find_cells']
 
 # %% ../nbs/02_ipynb.ipynb #fed1068a
 import difflib,re
@@ -27,7 +27,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from fastcore.meta import splice_sig
-from fastcore.xtras import truncstr
+from fastcore.xtras import dict2obj,truncstr
 from .edit import *
 
 # %% ../nbs/02_ipynb.ipynb #005ca01f
@@ -135,18 +135,52 @@ def paste_cells(fname:str, # ipynb to paste into
     return ids
 
 # %% ../nbs/02_ipynb.ipynb #e8a9b077
-def view_cell(fname:str, id:str, nums:bool=True):
+def view_cell(fname:str, # ipynb to get info for
+              id:str, # cell id to view
+              nums:bool=True, # Show line numbers?
+              view_range:list=None): # Optional 1-indexed (start, end) line range, end=-1 for last line
     "Show cell source with optional line numbers"
-    return Notebook.open(fname).view(id, nums=nums)
+    res = Notebook.open(fname).view(id, nums=nums)
+    if not view_range: return res
+    s,e = view_range
+    return '\n'.join(res.splitlines()[s-1:None if e==-1 else e])
+
+
+# %% ../nbs/02_ipynb.ipynb #5558d37a
+def _trunc_middle(s, limit, sep='\n…\n'):
+    if len(s)<=limit: return s
+    i = limit//2
+    return s[:i] + sep + s[len(s)-(limit-i):]
+
+def _has_err(c): return any(o.get('output_type')=='error' for o in c.get('outputs',[]))
+
+def _prepped(c, nums:bool=False, trunc_in:bool=False, trunc_out:bool=True):
+    "Copy of cell `c` with line numbering and truncation applied; error outputs are never truncated"
+    c = dict2obj(dict(c))
+    src = c.source
+    if nums: src = '\n'.join(f'{i+1:6d} │ {l}' for i,l in enumerate(src.splitlines()))
+    if trunc_in: src = _trunc_middle(src, 80)
+    c.source = src
+    outs = c.get('outputs')
+    if outs and trunc_out:
+        errs = [o for o in outs if o.get('output_type')=='error']
+        rest = [o for o in outs if o.get('output_type')!='error']
+        c.outputs = ([mk_stream('stdout', _trunc_middle(render_text(rest), 100))] if rest else []) + errs
+    return c
 
 # %% ../nbs/02_ipynb.ipynb #89723255
-def view_nb(fname:str, incl_out:bool=False, only_errors:bool=False):
-    "Show notebook source as concise xml; `incl_out` includes output, `only_errors` shows only cells with an error output (implies output included)"
+def view_nb(fname:str, # ipynb to get info for
+            incl_out:bool=False, # Include cell outputs?
+            only_errors:bool=False, # Show only cells with an error output (implies `incl_out`)?
+            trunc_out:bool=True, # Middle-truncate non-error outputs to ~100 chars (when included)?
+            trunc_in:bool=False): # Middle-truncate cell sources to ~80 chars?
+    "Show notebook source as concise xml"
     nb = Notebook.open(fname)
-    if only_errors:
-        cells = [c for c in nb.cells if any(o.get('output_type')=='error' for o in c.get('outputs',[]))]
-        return cells2xml(cells, path=nb.path.name, incl_out=True)
-    return repr(nb) if incl_out else nb.concise
+    cells = nb.cells
+    if only_errors: cells,incl_out = [c for c in cells if _has_err(c)],True
+    if (incl_out and trunc_out) or trunc_in:
+        cells = [_prepped(c, trunc_in=trunc_in, trunc_out=trunc_out) for c in cells]
+    return cells2xml(cells, path=nb.path if incl_out and not only_errors else nb.path.name, incl_out=incl_out)
 
 
 # %% ../nbs/02_ipynb.ipynb #3988c2e4
@@ -155,3 +189,62 @@ def summary_nb(fname:str,      # ipynb to summarize
     "One line per cell: id, type, and truncated/escaped source"
     def _l(c): return f"{c.id}:{c.cell_type[0]}:{truncstr(c.source.replace(chr(10), r'\n'), maxlen)}"
     return '\n'.join(_l(c) for c in Notebook.open(fname).cells)
+
+# %% ../nbs/02_ipynb.ipynb #f892b107
+def _hdr_level(c):
+    "Markdown heading level of cell `c`, or 0"
+    if c.cell_type!='markdown': return 0
+    m = re.match(r'(#{1,6})\s', c.source)
+    return len(m.group(1)) if m else 0
+
+_re_exp = re.compile(r'#\|\s*exports?\b')
+
+def find_cells(fname:str, # ipynb to search
+    re_pattern:str='', # Optional regex to search cell sources for (re.DOTALL+re.MULTILINE is used)
+    cell_type:str=None, # Optional limit by cell type ('code', 'markdown', or 'raw')
+    before:int=0, # Include additional n cells before matches
+    after:int=0, # Include additional n cells after matches
+    context:int=0, # Include additional n cells around matches
+    use_case:bool=False, # Use case-sensitive matching?
+    use_regex:bool=True, # Use regex matching (else plain substring)?
+    only_err:bool=False, # Only return cells that have error outputs?
+    only_exp:bool=False, # Only return cells with an nbdev `#| export` directive?
+    ids:str|list[str]='', # Optionally filter by cell ids (comma-separated str, or list)
+    limit:int=None, # Optionally limit number of matched cells
+    incl_out:bool=False, # Include outputs in the result?
+    nums:bool=False, # Show line numbers?
+    trunc_out:bool=True, # Middle-truncate non-error outputs to ~100 chars (when included)?
+    trunc_in:bool=False, # Middle-truncate cell sources to ~80 chars?
+    headers_only:bool=False, # Only return markdown header cells, first line only?
+    header_section:str=None, # Return the section starting with this header line, plus its children
+)->str: # Matching cells in concise XML format
+    "Find cells in `fname` matching all the given criteria"
+    nb = Notebook.open(fname)
+    cells = nb.cells
+    if header_section:
+        res,lvl = [],0
+        for c in cells:
+            h = _hdr_level(c)
+            if res and 0<h<=lvl: break
+            if res: res.append(c)
+            elif h and c.source.split('\n',1)[0]==header_section: res,lvl = [c],h
+    else:
+        if re_pattern and not use_regex: re_pattern = re.escape(re_pattern)
+        elif re_pattern:
+            try: re.compile(re_pattern)
+            except re.error: re_pattern = re.escape(re_pattern)
+        flags = re.DOTALL|re.MULTILINE|(0 if use_case else re.IGNORECASE)
+        if isinstance(ids,str): ids = ids.split(',') if ids else []
+        ids = set(ids)
+        def _match(c): return ((not cell_type or c.cell_type==cell_type)
+            and (not only_err or _has_err(c)) and (not only_exp or _re_exp.match(c.source))
+            and (not headers_only or _hdr_level(c)) and (not ids or c.id in ids)
+            and (not re_pattern or re.search(re_pattern, c.source, flags)))
+        idxs = [i for i,c in enumerate(cells) if _match(c)][:limit]
+        before,after = max(before,context),max(after,context)
+        if before or after: idxs = sorted({j for i in idxs for j in range(max(0,i-before), min(len(cells),i+after+1))})
+        res = [cells[i] for i in idxs]
+    if headers_only: res = [dict2obj(dict(c, source=c.source.split('\n',1)[0])) for c in res]
+    if nums or trunc_in or (incl_out and trunc_out):
+        res = [_prepped(c, nums=nums, trunc_in=trunc_in, trunc_out=trunc_out) for c in res]
+    return cells2xml(res, path=nb.path.name, incl_out=incl_out)
