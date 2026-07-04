@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.15
+
+### New Features
+
+- Add `use_regex` mode to `str_replace`/`strs_replace` ([#31](https://github.com/AnswerDotAI/pyskills/issues/31))
+
+
 ## 0.0.14
 
 ### New Features
