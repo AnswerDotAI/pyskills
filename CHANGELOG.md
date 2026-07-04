@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.13
+
+### New Features
+
+- Add cell copy/cut/paste and `only_errors` `view_nb` ([#29](https://github.com/AnswerDotAI/pyskills/issues/29))
+- Add `summary_nb` for one-line-per-cell notebook overview ([#28](https://github.com/AnswerDotAI/pyskills/issues/28))
+
+
 ## 0.0.12
 
 ### New Features
