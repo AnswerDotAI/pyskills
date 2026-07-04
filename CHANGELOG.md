@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.14
+
+### New Features
+
+- Add `find_cells` to ipynb skill with header/section/search filtering, and `view_cell`/`view_nb` truncation and range options ([#30](https://github.com/AnswerDotAI/pyskills/issues/30))
+
+
 ## 0.0.13
 
 ### New Features
