@@ -6,12 +6,16 @@ Call `list_pyskills()` to get a `{module: description}` dict of all registered p
 
 ## Loading a pyskill
 
-Use standard Python import, then `doc()` to inspect at increasing detail:
+Use standard Python import, then `doc()` to inspect at increasing detail -- module first, then the specific class/function before first use:
 
     import pyskills.skill
     doc(pyskills.skill)        # module overview: classes, functions, submodules
     doc(SkillTestClass)        # class detail: bases, __init__, methods, properties
     doc(skill_test_func)       # function detail: full signature with docments
+
+Doc the module once per session before using anything from it; doc each individual class/function right before its first call, even if the module's already been doc'd -- module-level overviews don't reliably show full per-symbol signatures/docments. When more than one pyskill looks like a candidate for a task, `doc()` each candidate rather than guessing from the one-line description alone -- some pyskills specialize by input type (e.g. `pyskills.edit` for plain text files vs `pyskills.ipynb` for notebooks; prefer `exhash.skill` for text editing when it's available) and the short description won't always make that distinction clear.
+
+Summarize what a pyskill's docs or results say rather than dumping the full output verbatim, unless the user actually needs to see all of it.
 
 NB: `doc()` works on *all* python modules, not only pyskills. The only thing that's special about pyskills is the entrypoint registration that makes them appear in `list_pyskills()`; they can cross-reference other modules that may not be listed, but can still be imported and `doc()` run.
 
@@ -25,7 +29,7 @@ This module includes a test class and function to verify the system works:
 
 ## Creating pyskills
 
-`from pyskills import createskill; doc(createskill)` for how to build and register your own pyskill modules, including the allow/policy system.
+`from pyskills import createskill; doc(createskill)` for how to build and register your own pyskill modules.
 """
 
 # inspect is unused - imported to show that non-owned submodules aren't listed in doc/xdir

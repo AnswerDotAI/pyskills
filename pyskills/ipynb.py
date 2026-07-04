@@ -7,7 +7,7 @@ Cell tools take an ipynb path and a cell id, e.g:
 cell_replace_lines('nb.ipynb', cell_id, 2, 3, 'replaced')
 cell_insert_line('nb.ipynb', cell_id, 0, 'first line')
 
-Use `summary_nb` for a one-line-per-cell overview of a large notebook, and `view_nb` to view the whole notebook. Use `view_cell` to see a cell's source with line numbers before editing. Use `add_cell` to insert a new cell before/after an existing cell id, and `del_cells` to delete cells.
+Use `summary_nb` for a one-line-per-cell overview of a large notebook, and `view_nb` to view the whole notebook (pass `only_errors=True` after running tests to jump straight to the cells that errored, with their tracebacks). Use `view_cell` to see a cell's source with line numbers before editing. Use `add_cell` to insert a new cell before/after an existing cell id, and `del_cells` to delete cells.
 
 ## Line filtering
 
@@ -19,7 +19,7 @@ Docs: https://AnswerDotAI.github.io/pyskills/ipynb.html.md"""
 
 # %% auto #0
 __all__ = ['cell_insert_line', 'cell_str_replace', 'cell_strs_replace', 'cell_replace_lines', 'cell_del_lines', 'add_cell',
-           'del_cells', 'view_cell', 'view_nb', 'summary_nb']
+           'del_cells', 'copy_cells', 'cut_cells', 'paste_cells', 'view_cell', 'view_nb', 'summary_nb']
 
 # %% ../nbs/02_ipynb.ipynb #fed1068a
 import difflib,re
@@ -102,16 +102,52 @@ def del_cells(fname:str, # ipynb to edit
     for i in ids: del nb[i]
     nb.save()
 
+# %% ../nbs/02_ipynb.ipynb #cf681c19
+_paste_buf = []
+
+def copy_cells(fname:str, # ipynb to copy from
+               *ids:str): # ids of cells to copy
+    "Copy cells into the paste buffer (replacing its contents), for later `paste_cells`"
+    nb = Notebook.open(fname)
+    global _paste_buf
+    _paste_buf = [(nb[i].cell_type, nb[i].source) for i in ids]
+
+
+# %% ../nbs/02_ipynb.ipynb #39735474
+def cut_cells(fname:str, # ipynb to cut from
+              *ids:str): # ids of cells to cut
+    "Copy cells into the paste buffer, then delete them from `fname`"
+    copy_cells(fname, *ids)
+    del_cells(fname, *ids)
+
+
+# %% ../nbs/02_ipynb.ipynb #89232061
+def paste_cells(fname:str, # ipynb to paste into
+                before:str=None, # id of cell to insert before
+                after:str=None): # id of cell to insert after
+    "Insert the buffered cells (from `copy_cells`/`cut_cells`) before/after a cell id, returning the new ids"
+    if not _paste_buf: raise ValueError('Paste buffer is empty -- use `copy_cells`/`cut_cells` first')
+    if (before is None)==(after is None): raise ValueError('Pass exactly one of `before` or `after`')
+    ids,anchor,is_after = [],(after if after is not None else before),(after is not None)
+    for cell_type,source in _paste_buf:
+        nid = add_cell(fname, source, cell_type, **({'after':anchor} if is_after else {'before':anchor}))
+        ids.append(nid); anchor,is_after = nid,True
+    return ids
+
 # %% ../nbs/02_ipynb.ipynb #e8a9b077
 def view_cell(fname:str, id:str, nums:bool=True):
     "Show cell source with optional line numbers"
     return Notebook.open(fname).view(id, nums=nums)
 
 # %% ../nbs/02_ipynb.ipynb #89723255
-def view_nb(fname:str, incl_out:bool=False):
-    "Show notebook source as concise xml, optionally including output if `incl_out`"
+def view_nb(fname:str, incl_out:bool=False, only_errors:bool=False):
+    "Show notebook source as concise xml; `incl_out` includes output, `only_errors` shows only cells with an error output (implies output included)"
     nb = Notebook.open(fname)
+    if only_errors:
+        cells = [c for c in nb.cells if any(o.get('output_type')=='error' for o in c.get('outputs',[]))]
+        return cells2xml(cells, path=nb.path.name, incl_out=True)
     return repr(nb) if incl_out else nb.concise
+
 
 # %% ../nbs/02_ipynb.ipynb #3988c2e4
 def summary_nb(fname:str,      # ipynb to summarize
