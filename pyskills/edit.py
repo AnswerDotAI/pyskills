@@ -26,11 +26,7 @@ __all__ = ['file_insert_line', 'file_str_replace', 'file_strs_replace', 'file_re
 # %% ../nbs/01_edit.ipynb #fed1068a
 import difflib,re
 from pathlib import Path
-from tempfile import TemporaryDirectory
-from fnmatch import translate
-
-from fastcore.utils import globtastic
-from fastcore.meta import splice_sig, delegates
+from fastcore.meta import splice_sig
 
 # %% ../nbs/01_edit.ipynb #8478e86e
 def file_view(
@@ -149,7 +145,7 @@ def strs_replace(
     if len(old_strs) != len(new_strs): raise ValueError(f"Length mismatch: {len(old_strs)} old_strs vs {len(new_strs)} new_strs")
     for idx,(old_str,new_str) in enumerate(zip(old_strs, new_strs)):
         text = str_replace(text, old_str, new_str, start_line=start_line, end_line=end_line,
-                            n_matches=n_matches, re_filter=re_filter, invert_filter=invert_filter, use_regex=use_regex)
+            n_matches=n_matches, re_filter=re_filter, invert_filter=invert_filter, use_regex=use_regex)
     return text
 
 file_strs_replace = file_edit(strs_replace, 'file_strs_replace')

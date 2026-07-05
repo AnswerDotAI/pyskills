@@ -23,9 +23,7 @@ __all__ = ['cell_insert_line', 'cell_str_replace', 'cell_strs_replace', 'cell_re
 
 # %% ../nbs/02_ipynb.ipynb #fed1068a
 import difflib,re
-from pathlib import Path
-from tempfile import TemporaryDirectory
-
+from fastcore.utils import *
 from fastcore.meta import splice_sig
 from fastcore.xtras import dict2obj,truncstr
 from .edit import *
@@ -81,10 +79,10 @@ cell_del_lines = _cell_edit(del_lines, 'cell_del_lines')
 
 # %% ../nbs/02_ipynb.ipynb #3bdf5927
 def add_cell(fname:str, # ipynb to edit
-             source:str, # source for the new cell
-             cell_type:str='code', # 'code', 'markdown', or 'raw'
-             before:str=None, # id of cell to insert before
-             after:str=None): # id of cell to insert after
+    source:str, # source for the new cell
+    cell_type:str='code', # 'code', 'markdown', or 'raw'
+    before:str=None, # id of cell to insert before
+    after:str=None): # id of cell to insert after
     "Add a new cell before/after an existing cell (pass exactly one), returning the new cell's id"
     if (before is None)==(after is None): raise ValueError('Pass exactly one of `before` or `after`')
     nb = Notebook.open(fname)
@@ -96,7 +94,7 @@ def add_cell(fname:str, # ipynb to edit
 
 # %% ../nbs/02_ipynb.ipynb #9e1fb838
 def del_cells(fname:str, # ipynb to edit
-              *ids:str): # ids of cells to delete
+    *ids:str): # ids of cells to delete
     "Delete cells by id"
     nb = Notebook.open(fname)
     for i in ids: del nb[i]
@@ -106,7 +104,7 @@ def del_cells(fname:str, # ipynb to edit
 _paste_buf = []
 
 def copy_cells(fname:str, # ipynb to copy from
-               *ids:str): # ids of cells to copy
+    *ids:str): # ids of cells to copy
     "Copy cells into the paste buffer (replacing its contents), for later `paste_cells`"
     nb = Notebook.open(fname)
     global _paste_buf
@@ -115,7 +113,7 @@ def copy_cells(fname:str, # ipynb to copy from
 
 # %% ../nbs/02_ipynb.ipynb #39735474
 def cut_cells(fname:str, # ipynb to cut from
-              *ids:str): # ids of cells to cut
+    *ids:str): # ids of cells to cut
     "Copy cells into the paste buffer, then delete them from `fname`"
     copy_cells(fname, *ids)
     del_cells(fname, *ids)
@@ -123,22 +121,23 @@ def cut_cells(fname:str, # ipynb to cut from
 
 # %% ../nbs/02_ipynb.ipynb #89232061
 def paste_cells(fname:str, # ipynb to paste into
-                before:str=None, # id of cell to insert before
-                after:str=None): # id of cell to insert after
+    before:str=None, # id of cell to insert before
+    after:str=None): # id of cell to insert after
     "Insert the buffered cells (from `copy_cells`/`cut_cells`) before/after a cell id, returning the new ids"
     if not _paste_buf: raise ValueError('Paste buffer is empty -- use `copy_cells`/`cut_cells` first')
     if (before is None)==(after is None): raise ValueError('Pass exactly one of `before` or `after`')
     ids,anchor,is_after = [],(after if after is not None else before),(after is not None)
     for cell_type,source in _paste_buf:
         nid = add_cell(fname, source, cell_type, **({'after':anchor} if is_after else {'before':anchor}))
-        ids.append(nid); anchor,is_after = nid,True
+        ids.append(nid)
+        anchor,is_after = nid,True
     return ids
 
 # %% ../nbs/02_ipynb.ipynb #e8a9b077
 def view_cell(fname:str, # ipynb to get info for
-              id:str, # cell id to view
-              nums:bool=True, # Show line numbers?
-              view_range:list=None): # Optional 1-indexed (start, end) line range, end=-1 for last line
+    id:str, # cell id to view
+    nums:bool=True, # Show line numbers?
+    view_range:list=None): # Optional 1-indexed (start, end) line range, end=-1 for last line
     "Show cell source with optional line numbers"
     res = Notebook.open(fname).view(id, nums=nums)
     if not view_range: return res
@@ -170,25 +169,25 @@ def _prepped(c, nums:bool=False, trunc_in:bool=False, trunc_out:bool=True):
 
 # %% ../nbs/02_ipynb.ipynb #89723255
 def view_nb(fname:str, # ipynb to get info for
-            incl_out:bool=False, # Include cell outputs?
-            only_errors:bool=False, # Show only cells with an error output (implies `incl_out`)?
-            trunc_out:bool=True, # Middle-truncate non-error outputs to ~100 chars (when included)?
-            trunc_in:bool=False): # Middle-truncate cell sources to ~80 chars?
+    incl_out:bool=False, # Include cell outputs?
+    only_errors:bool=False, # Show only cells with an error output (implies `incl_out`)?
+    trunc_out:bool=True, # Middle-truncate non-error outputs to ~100 chars (when included)?
+    trunc_in:bool=False): # Middle-truncate cell sources to ~80 chars?
     "Show notebook source as concise xml"
     nb = Notebook.open(fname)
     cells = nb.cells
     if only_errors: cells,incl_out = [c for c in cells if _has_err(c)],True
-    if (incl_out and trunc_out) or trunc_in:
-        cells = [_prepped(c, trunc_in=trunc_in, trunc_out=incl_out and trunc_out) for c in cells]
+    if (incl_out and trunc_out) or trunc_in: cells = [_prepped(c, trunc_in=trunc_in, trunc_out=incl_out and trunc_out) for c in cells]
     return cells2xml(cells, path=nb.path if incl_out and not only_errors else nb.path.name, incl_out=incl_out)
 
 
 # %% ../nbs/02_ipynb.ipynb #3988c2e4
 def summary_nb(fname:str,      # ipynb to summarize
-               maxlen:int=120): # truncate each cell's source to this
+    maxlen:int=120, # truncate each cell's source to this
+)->PrettyString:
     "One line per cell: id, type, and truncated/escaped source"
     def _l(c): return f"{c.id}:{c.cell_type[0]}:{truncstr(c.source.replace(chr(10), r'\n'), maxlen)}"
-    return '\n'.join(_l(c) for c in Notebook.open(fname).cells)
+    return PrettyString('\n'.join(_l(c) for c in Notebook.open(fname).cells))
 
 # %% ../nbs/02_ipynb.ipynb #f892b107
 def _hdr_level(c):
@@ -236,10 +235,13 @@ def find_cells(fname:str, # ipynb to search
         flags = re.DOTALL|re.MULTILINE|(0 if use_case else re.IGNORECASE)
         if isinstance(ids,str): ids = ids.split(',') if ids else []
         ids = set(ids)
-        def _match(c): return ((not cell_type or c.cell_type==cell_type)
-            and (not only_err or _has_err(c)) and (not only_exp or _re_exp.match(c.source))
-            and (not headers_only or _hdr_level(c)) and (not ids or c.id in ids)
-            and (not re_pattern or re.search(re_pattern, c.source, flags)))
+        def _match(c):
+            if cell_type and c.cell_type!=cell_type: return False
+            if only_err and not _has_err(c): return False
+            if only_exp and not _re_exp.match(c.source): return False
+            if headers_only and not _hdr_level(c): return False
+            if ids and c.id not in ids: return False
+            return not re_pattern or re.search(re_pattern, c.source, flags)
         idxs = [i for i,c in enumerate(cells) if _match(c)][:limit]
         before,after = max(before,context),max(after,context)
         if before or after: idxs = sorted({j for i in idxs for j in range(max(0,i-before), min(len(cells),i+after+1))})

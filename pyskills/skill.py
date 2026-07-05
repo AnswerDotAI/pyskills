@@ -35,7 +35,7 @@ This module includes a test class and function to verify the system works:
 """
 
 # inspect is unused - imported to show that non-owned submodules aren't listed in doc/xdir
-import pyskills.createskill, inspect
+import pyskills.createskill, inspect # chkstyle: ignore
 
 class SkillTestClass(str):
     """Some class.

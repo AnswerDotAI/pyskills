@@ -35,8 +35,7 @@ def list_pyskills():
     """Returns {module: description} for all pyskills. To load a module, use `import {module}` then view `doc({module}).
     **NB**: pyskills are *THE* critical way to extend functionality. *ALWAYS* check for pyskills to help with tasks.
     If unsure whether a particular pyskill might help, load it and grabs its docs to see!"""
-    return {ep.value: epd for ep in entry_points().select(group='pyskills')
-        if (epd := ep_desc(ep)) is not None}
+    return {ep.value: epd for ep in entry_points().select(group='pyskills') if (epd := ep_desc(ep)) is not None}
 
 # %% ../nbs/00_core.ipynb #3c64526e
 _all_ = ['__pytools__']
