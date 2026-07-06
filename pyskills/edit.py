@@ -109,10 +109,11 @@ def str_replace(
     "Replace occurrence(s) of old_str with new_str"
     pat = re.compile(old_str) if use_regex else None
     def _repl(s, label=''):
+        def _err(s): return ValueError(f"Failed to find {old_str!r}{label} in: {s[:200]!r}" + ('...' if len(s)>200 else ''))
         if pat:
-            if not pat.search(s): raise ValueError(f"Text not found{label}: {repr(old_str)}")
+            if not pat.search(s): raise _err(s)
             return pat.sub(new_str, s, count=n_matches or 0)
-        if s.count(old_str) == 0: raise ValueError(f"Text not found{label}: {repr(old_str)}")
+        if s.count(old_str) == 0: raise _err(s)
         return s.replace(old_str, new_str) if n_matches is None else s.replace(old_str, new_str, n_matches)
     if re_filter or start_line or end_line:
         lines = text.splitlines(True)
