@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.16
+
+### New Features
+
+- Add `create_notebook`, improve `str_replace` errors with context, default `find_cells` context to 1 ([#32](https://github.com/AnswerDotAI/pyskills/issues/32))
+
+
 ## 0.0.15
 
 ### New Features
