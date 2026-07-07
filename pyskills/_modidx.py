@@ -71,5 +71,6 @@ d = { 'settings': { 'branch': 'main',
                                 'pyskills.ipynb.paste_cells': ('ipynb.html#paste_cells', 'pyskills/ipynb.py'),
                                 'pyskills.ipynb.summary_nb': ('ipynb.html#summary_nb', 'pyskills/ipynb.py'),
                                 'pyskills.ipynb.view_cell': ('ipynb.html#view_cell', 'pyskills/ipynb.py'),
+                                'pyskills.ipynb.view_cells': ('ipynb.html#view_cells', 'pyskills/ipynb.py'),
                                 'pyskills.ipynb.view_nb': ('ipynb.html#view_nb', 'pyskills/ipynb.py')},
             'pyskills.skill': {}}}

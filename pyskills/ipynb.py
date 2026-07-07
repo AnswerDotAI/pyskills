@@ -19,8 +19,8 @@ Docs: https://AnswerDotAI.github.io/pyskills/ipynb.html.md"""
 
 # %% auto #0
 __all__ = ['cell_insert_line', 'cell_str_replace', 'cell_strs_replace', 'cell_replace_lines', 'cell_del_lines', 'create_notebook',
-           'add_cell', 'del_cells', 'copy_cells', 'cut_cells', 'paste_cells', 'view_cell', 'view_nb', 'summary_nb',
-           'find_cells']
+           'add_cell', 'del_cells', 'copy_cells', 'cut_cells', 'paste_cells', 'view_cell', 'view_cells', 'view_nb',
+           'summary_nb', 'find_cells']
 
 # %% ../nbs/02_ipynb.ipynb #fed1068a
 import difflib,re
@@ -157,6 +157,13 @@ def view_cell(fname:str, # ipynb to get info for
     return '\n'.join(res.splitlines()[s-1:None if e==-1 else e])
 
 
+# %% ../nbs/02_ipynb.ipynb #774f54f0
+def view_cells(fname:str, # ipynb to get info for
+    *ids:str, # ids of cells to view
+    nums:bool=True): # Show line numbers?
+    "Show multiple cells' sources, each preceded by a `# cell <id>` header"
+    return '\n'.join(f'# cell {i}\n{view_cell(fname, i, nums=nums)}' for i in ids)
+
 # %% ../nbs/02_ipynb.ipynb #5558d37a
 def _trunc_middle(s, limit, sep='\n…\n'):
     if len(s)<=limit: return s
@@ -190,8 +197,7 @@ def view_nb(fname:str, # ipynb to get info for
     cells = nb.cells
     if only_errors: cells,incl_out = [c for c in cells if _has_err(c)],True
     if (incl_out and trunc_out) or trunc_in: cells = [_prepped(c, trunc_in=trunc_in, trunc_out=incl_out and trunc_out) for c in cells]
-    return cells2xml(cells, path=nb.path if incl_out and not only_errors else nb.path.name, incl_out=incl_out)
-
+    return PrettyString(cells2xml(cells, path=nb.path if incl_out and not only_errors else nb.path.name, incl_out=incl_out))
 
 # %% ../nbs/02_ipynb.ipynb #3988c2e4
 def summary_nb(fname:str,      # ipynb to summarize
@@ -262,4 +268,4 @@ def find_cells(fname:str, # ipynb to search
     if headers_only: res = [dict2obj(dict(c, source=c.source.split('\n',1)[0])) for c in res]
     if nums or trunc_in or (incl_out and trunc_out):
         res = [_prepped(c, nums=nums, trunc_in=trunc_in, trunc_out=incl_out and trunc_out) for c in res]
-    return cells2xml(res, path=nb.path.name, incl_out=incl_out)
+    return PrettyString(cells2xml(res, path=nb.path.name, incl_out=incl_out))
