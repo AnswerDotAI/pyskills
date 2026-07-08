@@ -8,6 +8,9 @@ file_view('~/a/b.py', 3)
 file_create('~/a/b/c.py', 'content here')
 file_str_replace('myfile.py', 'old_name', 'new_name')
 file_del_lines('myfile.py', 2, 4)
+file_replace_lines('myfile.py', new_content=src)   # no line numbers: replace the entire contents
+
+In `replace_lines` and its `file_`/`cell_` wrappers, `start_line=None` means line 1 and `end_line=None` means the last line, so the defaults replace the whole contents - the idiomatic full-file (or full-notebook-cell) rewrite. `del_lines` is destructive, so it takes no defaults: state the range explicitly (`1, -1` deletes all lines).
 
 ## Line filtering
 
@@ -31,18 +34,18 @@ from fastcore.meta import splice_sig
 # %% ../nbs/01_edit.ipynb #8478e86e
 def file_view(
     path:str, # Path to view (expands `~` if needed)
-    startline:int=1, # Starting line to view
-    endline:int=None # End line (defaults to last line if None)
+    start_line:int=1, # Starting line to view
+    end_line:int=None # End line (defaults to last line if None; may be past EOF, which clamps to the last line - handy when the file size is unknown)
 ):
     "Read file contents, optionally limited to 1-based line range"
     path = Path(path).expanduser()
     lines = path.read_text().splitlines()
     if not lines: return ''
-    if endline is None: endline = len(lines)
-    if endline < 0: endline = len(lines)+endline+1
-    if not (1 <= startline <= len(lines)): return f'error: Invalid startline {startline}. Valid range: 1-{len(lines)}'
-    if endline > len(lines): endline = len(lines)
-    return '\n'.join(f'{i}: {l}' for i,l in enumerate(lines[startline-1:endline], startline))
+    if end_line is None: end_line = len(lines)
+    if end_line < 0: end_line = len(lines)+end_line+1
+    if not (1 <= start_line <= len(lines)): return f'error: Invalid start_line {start_line}. Valid range: 1-{len(lines)}'
+    if end_line > len(lines): end_line = len(lines)
+    return '\n'.join(f'{i}: {l}' for i,l in enumerate(lines[start_line-1:end_line], start_line))
 
 # %% ../nbs/01_edit.ipynb #84615568
 def file_create(
@@ -94,6 +97,17 @@ def insert_line(
 
 file_insert_line = file_edit(insert_line, 'file_insert_line')
 
+# %% ../nbs/01_edit.ipynb #3ae109f7
+def _norm_lines(n:int, start:int=None, end:int=None):
+    "Normalize and validate line range; `None` start/end mean first/last line. Returns (start, end) or raises ValueError."
+    if start is None: start = 1
+    if end is None: end = n
+    if end < 0: end = n + end + 1
+    if not (1 <= start <= n): raise ValueError(f'Invalid start line {start}. Valid range: 1-{n}')
+    if not (start <= end <= n): raise ValueError(f'Invalid end line {end}. Valid range: {start}-{n}')
+    return start, end
+
+
 # %% ../nbs/01_edit.ipynb #52428b51
 def str_replace(
     text:str,
@@ -115,9 +129,10 @@ def str_replace(
             return pat.sub(new_str, s, count=n_matches or 0)
         if s.count(old_str) == 0: raise _err(s)
         return s.replace(old_str, new_str) if n_matches is None else s.replace(old_str, new_str, n_matches)
-    if re_filter or start_line or end_line:
+    if re_filter or start_line is not None or end_line is not None:
         lines = text.splitlines(True)
-        s,e = (start_line or 1)-1, end_line or len(lines)
+        s,e = _norm_lines(len(lines), start_line, end_line)
+        s -= 1
         if not re_filter: return ''.join(lines[:s]) + _repl(''.join(lines[s:e]), f' in lines {s+1}-{e}') + ''.join(lines[e:])
         pat = re.compile(re_filter)
         matched = [i for i in range(s,e) if bool(pat.search(lines[i])) != invert_filter]
@@ -151,40 +166,34 @@ def strs_replace(
 
 file_strs_replace = file_edit(strs_replace, 'file_strs_replace')
 
-# %% ../nbs/01_edit.ipynb #7558e897
-def _norm_lines(n:int, start:int, end:int=None):
-    "Normalize and validate line range. Returns (start, end) or raises ValueError."
-    if end is None: end = start
-    if end < 0: end = n + end + 1
-    if not (1 <= start <= n): raise ValueError(f'Invalid start line {start}. Valid range: 1-{n}')
-    if not (start <= end <= n): raise ValueError(f'Invalid end line {end}. Valid range: {start}-{n}')
-    return start, end
-
 # %% ../nbs/01_edit.ipynb #03685bf9
 def replace_lines(
     text:str,
-    start_line:int, # Starting line number to replace (1-based indexing)
-    end_line:int=None, # Ending line number to replace (1-based, inclusive, negative counts from end, None for single line)
+    start_line:int=None, # Starting line number to replace (1-based); None means line 1
+    end_line:int=None, # Ending line number to replace (1-based, inclusive, negative counts from end); None means the last line
     new_content:str='', # New content to replace the specified lines
 ):
-    "Replace line range with new content"
+    "Replace line range with new content; the defaults replace the entire contents"
+    if not text: return new_content
     lines = text.splitlines(keepends=True)
     s,e = _norm_lines(len(lines), start_line, end_line)
-    if lines and new_content and not new_content.endswith('\n'): new_content += '\n'
+    if new_content and not new_content.endswith('\n'): new_content += '\n'
     lines[s-1:e] = [new_content] if new_content else []
     return ''.join(lines)
 
 file_replace_lines = file_edit(replace_lines, 'file_replace_lines')
 
+
 # %% ../nbs/01_edit.ipynb #cc1b61a5
 def del_lines(
     text:str,
-    start_line:int, # Starting line number to delete (1-based indexing)
-    end_line:int=None, # Ending line number to delete (1-based, inclusive, negative counts from end, None for single line)
+    start_line:int, # Starting line number to delete (1-based); required
+    end_line:int, # Ending line number to delete (1-based, inclusive, negative counts from end); required
     re_filter:str=None, # If provided, only delete lines matching this regex (like g// in ex)
     invert_filter:bool=False, # Invert the filter (like g!// in ex)
 ):
-    "Delete line range"
+    "Delete line range; deletion is destructive, so both line numbers must be given explicitly (`1, -1` for all lines)"
+    if start_line is None or end_line is None: raise ValueError('del_lines requires explicit start_line and end_line')
     lines = text.splitlines(keepends=True)
     s,e = _norm_lines(len(lines), start_line, end_line)
     if re_filter:
@@ -196,3 +205,4 @@ def del_lines(
     return ''.join(lines)
 
 file_del_lines = file_edit(del_lines, 'file_del_lines')
+
