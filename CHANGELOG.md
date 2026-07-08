@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.17
+
+### New Features
+
+- Add `__allow__` protocol, callable instance support, and audit event to `allow()` ([#34](https://github.com/AnswerDotAI/pyskills/issues/34))
+- Add `view_cells` for displaying multiple cells at once; wrap `view_nb` and `find_cells` output in `PrettyString` ([#33](https://github.com/AnswerDotAI/pyskills/issues/33))
+
+
 ## 0.0.16
 
 ### New Features
