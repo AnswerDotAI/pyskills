@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.18
+
+### New Features
+
+- Refactor line-range APIs: make `replace_lines`/`str_replace` default to whole-file scope, require explicit bounds for `del_lines`, and consolidate `_norm_lines` helper ([#35](https://github.com/AnswerDotAI/pyskills/issues/35))
+
+
 ## 0.0.17
 
 ### New Features
