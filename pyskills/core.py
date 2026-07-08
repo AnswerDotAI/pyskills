@@ -52,11 +52,16 @@ def _set_wrapped(o, name, f=None):
 # %% ../nbs/00_core.ipynb #a7f5fc60
 def allow(*c, allow_policy=None): # Callable that raises if call not allowed
     "Add all items in `c` to `__pytools__`, optionally constrained by `allow_policy`"
+    sys.audit('pyskills.allow', c)
     def _wrap(v):
         if allow_policy is None or v is ... or isinstance(v, tuple): return v
         return (v, allow_policy)
     res = None
     for o in c:
+        if hasattr(o, '__allow__'):
+            allow(*o.__allow__(), allow_policy=allow_policy)
+            res = o
+            continue
         if isinstance(o, dict):
             for k,v in o.items():
                 if callable(k) and not isinstance(k, (type, types.ModuleType)):
@@ -68,6 +73,10 @@ def allow(*c, allow_policy=None): # Callable that raises if call not allowed
                     if isinstance(name := x[0] if isinstance(x, tuple) else x, str): _set_wrapped(k, name)
         else:
             res = track_call(o) if callable(o) else o
+            if not isinstance(o, type) and callable(o) and not inspect.isroutine(o) and not hasattr(o, '__qualname__'):
+                __pytools__[o].add(_wrap('__call__'))
+                _set_wrapped(type(o), '__call__')
+                continue
             objclass = getattr(o, '__objclass__', None)
             if objclass is not None:
                 __pytools__[objclass].add(_wrap(o.__name__))

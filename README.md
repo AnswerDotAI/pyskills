@@ -15,7 +15,8 @@ It includes
 for discovery,
 [`doc()`](https://AnswerDotAI.github.io/pyskills/core.html#doc) for
 rendering module/class/function documentation in LLM-friendly format,
-and an
+[`xdir()`](https://AnswerDotAI.github.io/pyskills/core.html#xdir) for
+listing a module or class’s public symbols, and an
 [`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow)
 system for registering safe callable access in sandboxed environments.
 Skills can be installed as regular packages with entry points, or
@@ -59,10 +60,10 @@ pyskill modules:
 list_pyskills()
 ```
 
-    {'pyskills.skill': 'Pyskills is a plugin system allowing Python packages to register "skills" — units of LLM-usable functionality — via standard Python entry points. An LLM host (e.g. solveit) discovers available pyskills without importing them, reads lightweight descriptions via AST inspection, and selectively loads chosen pyskills into context using standard imports.',
-     'test.skill': 'A test pyskill.'}
+    {'pyskills.skill': 'Pyskills is a plugin system allowing Python packages to register "skills" (units of LLM-usable functionality) via standard Python entry points. An LLM host (e.g. solveit) discovers available pyskills without importing them, reads lightweight descriptions via AST inspection, and selectively loads chosen pyskills into context using standard imports.',
+     'test.skill': 'A test skill.'}
 
-### The [`doc`](https://AnswerDotAI.github.io/pyskills/core.html#doc) function
+### The [`doc`](https://AnswerDotAI.github.io/pyskills/core.html#doc) and [`xdir`](https://AnswerDotAI.github.io/pyskills/core.html#xdir) functions
 
 Once you’ve found a pyskill you want to use, import its module using
 standard python syntax:
@@ -80,7 +81,9 @@ case.
 For a **module**,
 [`doc`](https://AnswerDotAI.github.io/pyskills/core.html#doc) shows all
 public classes and functions with their signatures and first docstring
-line:
+line, submodules, and any
+[`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow)
+calls:
 
 ``` python
 print(doc(pyskills.skill)[-500:])
@@ -134,17 +137,16 @@ print(doc(pyskills.skill.SkillTestClass))
 
 When pyskills run in a sandboxed environment like
 [safepyrun](https://github.com/AnswerDotAI/safepyrun), they need to
-declare which functions and methods are safe for an LLM to call.
-safepyrun uses
-[RestrictedPython](https://restrictedpython.readthedocs.io/) to
-intercept every attribute access and function call, checking each one
-against an allowlist stored in the `__pytools__` registry. The
+declare which callables are trusted to perform otherwise-denied
+operations (filesystem writes, subprocesses, network access). safepyrun
+uses [fastaudit](https://github.com/AnswerDotAI/fastaudit) to deny those
+effects unless they happen inside a callable registered in the
+`__pytools__` registry. The
 [`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow)
-function is how pyskills register their safe callables into that
-registry.
+function is how pyskills register their trusted callables.
 
-You can allow individual functions, all public methods of a type, or
-specific methods:
+You can allow individual functions, methods, all public methods of a
+type, or one specific callable instance:
 
 ``` python
 # Allow specific methods on a type
@@ -153,16 +155,25 @@ allow({str: ['zfill']})
 # Allow all public methods on a type
 allow({list: ...})
 
-# Allow a callable function
+# Allow a function
 allow(list_pyskills)
+
+# Allow one specific callable instance (e.g. a dynamically-generated client op)
+allow(client.images.create_image)
 ```
+
+An object can also define `__allow__`, returning a list of items to
+register in its place;
+[`allow`](https://AnswerDotAI.github.io/pyskills/core.html#allow)
+recurses into the result, so a container (such as a fastspec client or
+op group) can register all its callables at once.
 
 Skill modules typically call
 [`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow) at
 module level, so permissions are registered automatically when the
-pyskill is imported. For instance, when `safepyrun`’s `RunPython`
-executes LLM-generated code, it checks every call against `__pytools__`.
-If a function isn’t registered, the call is blocked.
+pyskill is imported. When `safepyrun`’s `RunPython` executes
+LLM-generated code, pure computation just runs; an operation with side
+effects is only permitted when it happens inside a registered callable.
 
 The `pyskills.skill` module used in the examples above is itself
 registered as a pyskill entry point. It ships with pyskills both as a
