@@ -19,6 +19,7 @@ dependencies = ['fastaudit', 'fastcore>=1.12.33']
 
 [project.optional-dependencies]
 dev = ['httpx']
+ast = ['remold']
 
 [project.urls]
 Repository = "https://github.com/AnswerDotAI/pyskills"
