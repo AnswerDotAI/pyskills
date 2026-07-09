@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.19
+
+### New Features
+
+- Add ast-grep structural replacement (`ast_replace`/`ast_file`/`ast_cell`/`ast_cells`) and `python_cell`/`python_cells` for syntax-tree-aware source transforms ([#36](https://github.com/AnswerDotAI/pyskills/issues/36))
+
+
 ## 0.0.18
 
 ### New Features
