@@ -11,7 +11,7 @@ __all__ = ['ep_desc', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosA
 
 # %% ../nbs/00_core.ipynb #38e384dc
 from fastcore.utils import *
-from fastcore.docments import MarkdownRenderer,can_render
+from fastcore.docments import MarkdownRenderer,can_render,docments
 from fastcore.xdg import *
 from importlib.metadata import entry_points
 from inspect import signature
@@ -272,6 +272,12 @@ def _doc_class(sym):
     return PrettyString(parts[0] + '\n' + '\n'.join(parts[1:]))
 
 # %% ../nbs/00_core.ipynb #b2b29e28
+def _elided(obj, d):
+    "Does `doc(obj)` show more than its overview line: docments, or a docstring beyond its first line?"
+    if any(l.strip() for l in d[1:]): return True
+    try: return any(v is not None for v in docments(obj).values())
+    except Exception: return False
+
 def _doc_module(mod):
     parts = [f'# module {mod.__name__}:\n']
     if mod.__doc__: parts.append(f'"""{inspect.cleandoc(mod.__doc__)}\n"""')
@@ -288,6 +294,7 @@ def _doc_module(mod):
             typs.append(f'- class {name}{base_str}{comment}')
         elif callable(obj):
             pre = 'async def' if inspect.iscoroutinefunction(obj) else 'def'
+            if _elided(obj, d): comment = f'{comment}…' if comment else ': …  # …'
             funcs.append(f'- {pre} {name}{fmt_sig(obj)}{comment}')
     if typs: parts += ['\n## types:', *typs]
     if funcs: parts += ['\n## functions:', *funcs]

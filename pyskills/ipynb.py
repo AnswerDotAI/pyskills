@@ -2,7 +2,7 @@
 
 ## Ipynb file cell editing
 
-Cell tools take an ipynb path and a cell id, e.g:
+Cell tools take an ipynb path (expands `~`) and a cell id, e.g:
 
 cell_replace_lines('nb.ipynb', cell_id, 2, 3, 'replaced')
 cell_insert_line('nb.ipynb', cell_id, 0, 'first line')
@@ -47,10 +47,13 @@ returns:
 - For single id: diff of changes, or "none: No changes.", or "error: ..."
 - For id list (or 'all'): list of tuples of (id,diff) for changed messages"""
 
+# %% ../nbs/02_ipynb.ipynb #b0fa459d
+def _nb(fname): return Notebook.open(Path(fname).expanduser())
+
 # %% ../nbs/02_ipynb.ipynb #393c0016
 def _cell_edit(f, name=None):
     def wrapper(fname:str, id:str|list[str], *args, update_output:bool=False, **kw):
-        nb = Notebook.open(fname)
+        nb = _nb(fname)
         def _one(cid):
             cell = nb[cid]
             text = str(cell.outputs) if update_output else cell.source
@@ -100,7 +103,7 @@ def python_cells(
     *ids:str # cells to transform (default: all code cells)
 ):
     "Apply `func` to the source of each of `ids`, returning `(id, diff)` pairs for changed cells"
-    if not ids: ids = [str(c.id) for c in Notebook.open(fname).cells if c.cell_type=='code']
+    if not ids: ids = [str(c.id) for c in _nb(fname).cells if c.cell_type=='code']
     return python_cell(fname, list(ids), func)
 
 def ast_cells(
@@ -134,7 +137,7 @@ def add_cell(
 ):
     "Add a new cell before/after an existing cell (pass exactly one), returning the new cell's id"
     if (before is None)==(after is None): raise ValueError('Pass exactly one of `before` or `after`')
-    nb = Notebook.open(fname)
+    nb = _nb(fname)
     idx = nb.cells.index(nb[before or after]) + (after is not None)
     cell = mk_cell(source, cell_type)
     nb.cells.insert(idx, cell)
@@ -147,7 +150,7 @@ def del_cells(
     *ids:str # ids of cells to delete
 ):
     "Delete cells by id"
-    nb = Notebook.open(fname)
+    nb = _nb(fname)
     for i in ids: del nb[i]
     nb.save()
 
@@ -159,7 +162,7 @@ def copy_cells(
     *ids:str # ids of cells to copy
 ):
     "Copy cells into the paste buffer (replacing its contents), for later `paste_cells`"
-    nb = Notebook.open(fname)
+    nb = _nb(fname)
     global _paste_buf
     _paste_buf = [(nb[i].cell_type, nb[i].source) for i in ids]
 
@@ -198,7 +201,7 @@ def view_cell(
     view_range:list=None # Optional 1-indexed (start, end) line range, end=-1 for last line
 ):
     "Show cell source with optional line numbers"
-    res = PrettyString(Notebook.open(fname).view(id, nums=nums))
+    res = PrettyString(_nb(fname).view(id, nums=nums))
     if not view_range: return res
     s,e = view_range
     return PrettyString('\n'.join(res.splitlines()[s-1:None if e==-1 else e]))
@@ -244,7 +247,7 @@ def view_nb(
     trunc_in:bool=False # Middle-truncate cell sources to ~80 chars?
 ):
     "Show notebook source as concise xml"
-    nb = Notebook.open(fname)
+    nb = _nb(fname)
     cells = nb.cells
     if only_errors: cells,incl_out = [c for c in cells if _has_err(c)],True
     if (incl_out and trunc_out) or trunc_in: cells = [_prepped(c, trunc_in=trunc_in, trunc_out=incl_out and trunc_out) for c in cells]
@@ -257,7 +260,7 @@ def summary_nb(
 )->PrettyString:
     "One line per cell: id, type, and truncated/escaped source"
     def _l(c): return f"{c.id}:{c.cell_type[0]}:{truncstr(c.source.replace(chr(10), r'\n'), maxlen)}"
-    return PrettyString('\n'.join(_l(c) for c in Notebook.open(fname).cells))
+    return PrettyString('\n'.join(_l(c) for c in _nb(fname).cells))
 
 # %% ../nbs/02_ipynb.ipynb #f892b107
 def _hdr_level(c):
@@ -289,7 +292,7 @@ def find_cells(
     header_section:str=None, # Return the section starting with this header line, plus its children
 )->str: # Matching cells in concise XML format
     "Find cells in `fname` matching all the given criteria"
-    nb = Notebook.open(fname)
+    nb = _nb(fname)
     cells = nb.cells
     if header_section:
         res,lvl = [],0
