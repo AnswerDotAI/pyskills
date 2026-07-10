@@ -9,13 +9,12 @@ Call `list_pyskills()` to get a `{module: description}` dict of all registered p
 Use standard Python import, then `doc()` to inspect at increasing detail -- module first, then the specific class/function before first use:
 
     import pyskills.skill
-    doc(pyskills.skill)        # module overview: classes, functions, submodules
-    doc(SkillTestClass)        # class detail: bases, __init__, methods, properties
-    doc(skill_test_func)       # function detail: full signature with docments
+    doc(pyskills.skill)                            # module overview: classes, functions, submodules
+    doc(SkillTestClass, skill_test_func)           # symbol detail: full signatures with docments, one section each
 
 Normally use `from <module> import *` when loading a pyskill: each pyskill's `__all__` is carefully curated, so a star import brings in exactly the intended API.
 
-Doc the module once per session before using anything from it; doc each individual class/function right before its first call, even if the module's already been doc'd -- module-level overviews don't reliably show full per-symbol signatures/docments. When more than one pyskill looks like a candidate for a task, `doc()` each candidate rather than guessing from the one-line description alone -- some pyskills specialize by input type (e.g. `pyskills.edit` for plain text files vs `pyskills.ipynb` for notebooks; prefer `exhash.skill` for text editing when it's available) and the short description won't always make that distinction clear.
+Doc the module once per session before using anything from it; doc each individual class/function right before its first call, even if the module's already been doc'd -- module-level overviews don't reliably show full per-symbol signatures/docments. `doc` takes several objects at once, each returned as its own section, so batch the reads: `doc(pyskills.skill, SkillTestClass, skill_test_func)` covers the module and the symbols you already know you need in one call. When more than one pyskill looks like a candidate for a task, `doc()` each candidate rather than guessing from the one-line description alone -- some pyskills specialize by input type (e.g. `pyskills.edit` for plain text files vs `pyskills.ipynb` for notebooks; prefer `exhash.skill` for text editing when it's available) and the short description won't always make that distinction clear.
 
 Summarize what a pyskill's docs or results say rather than dumping the full output verbatim, unless the user actually needs to see all of it.
 

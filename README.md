@@ -60,8 +60,18 @@ pyskill modules:
 list_pyskills()
 ```
 
-    {'pyskills.skill': 'Pyskills is a plugin system allowing Python packages to register "skills" (units of LLM-usable functionality) via standard Python entry points. An LLM host (e.g. solveit) discovers available pyskills without importing them, reads lightweight descriptions via AST inspection, and selectively loads chosen pyskills into context using standard imports.',
-     'test.skill': 'A test skill.'}
+    {'pyskills.edit': 'Functions for creating, viewing, and modifying files. Each editing operation returns unified diffs showing what changed. Where the `exhash` pyskill is available, prefer it for editing: its hash-verified addressing fails loudly on stale context instead of editing nearby text.',
+     'pyskills.ipynb': 'Functions for view/modifying ipynb file notebook cells. Each operation returns unified diffs showing what changed. Where `exhash` is available, prefer its hash-verified editing for cell source changes.',
+     'pyskills.skill': 'Pyskills is a plugin system allowing Python packages to register "skills" (units of LLM-usable functionality) via standard Python entry points. An LLM host (e.g. solveit) discovers available pyskills without importing them, reads lightweight descriptions via AST inspection, and selectively loads chosen pyskills into context using standard imports.',
+     'tracefunc.skill': "Trace a Python function's execution at AST-line level: per-line hit counts and live variable values, via `sys.monitoring`. Use when debugging *why* code takes a branch, loops, recurses, or computes a wrong value, without editing the code under investigation or using an interactive debugger.",
+     'dialoghelper.solveitskill': 'Read, search, edit, and manage Solveit dialogs using dialoghelper.core, including dialog/message addressing, line-numbered inspection, targeted message edits, add/update/delete/copy/paste workflows, and safe editing patterns.',
+     'dialoghelper.termskill': 'Read and edit Solveit dialog (or Jupyter) .ipynb files from a CLI / script. Solveit is an online notebook application (like Jupyter with AI integration) where each notebook is called a "dialog" and is stored as an `.ipynb` file containing `code`, `note` (markdown), and `prompt` (markdown with a special delimiter) messages (aka "cells"). The `dialoghelper` package provides tools for reading, searching, adding, updating, and deleting those messages.',
+     'ghapi.skill': 'GitHub REST API access via `GhApi`, plus local git operations via `fastgit.Git`. Use this for day-to-day GitHub work: reading/creating issues and PRs, checking CI status, managing releases/branches/gists, and repo-local git operations -- all from Python, no shelling out to `gh`/`git` needed.',
+     'rgapi.skill': 'Fast and flexible file discovery and search for Python. Use this when code needs `fd`-style file finding or `rg`-style searching.',
+     'cordslite.skill': 'Load this skill when an agent needs to search, summarize, or find information in Discord using cordslite. It covers read-only workflows for connecting to Discord, opening a guild, orienting through channels, searching messages, reading threads, and fetching attachments.',
+     'bgtmux.skill': 'Use tmux-backed background terminal sessions from Solveit. Useful to have a persistent terminal session that both you and the user can inspect and edit, and that you can send input to from Solveit.',
+     'clikernel.skill': 'Use the persistent `clikernel` MCP session as the default workspace for any task advanced through live Python execution -- stateful inspection, file-editing workflows, debugging, experiments, API probes, data transforms, or notebook-style work. Read this before writing, running, or debugging Python code in a session with `clikernel` connected.',
+     'exhash.skill': 'Universal hash-verified text editing for local files. Use this when an LLM needs one safe editing interface for reading, previewing, and modifying text files.'}
 
 ### The [`doc`](https://AnswerDotAI.github.io/pyskills/core.html#doc) and [`xdir`](https://AnswerDotAI.github.io/pyskills/core.html#xdir) functions
 
@@ -89,32 +99,35 @@ calls:
 print(doc(pyskills.skill)[-500:])
 ```
 
-    illTestClass)
+    kill.SkillTestClass)
         doc(pyskills.skill.skill_test_func)
 
     ## Creating pyskills
 
-    `from pyskills import createskill; doc(createskill)` for how to build and register your own pyskill modules, including the allow/policy system."""
+    `from pyskills import createskill; doc(createskill)` for how to build and register your own pyskill modules.
+    """
 
-    def allow(*c, allow_policy=None): ...  # Add all items in `c` to `__pytools__`, optionally constrained by `allow_policy`
-    class SkillTestClass(str): ...  # Some class.
-    def skill_test_func(x: int = 0) -> str: ...  # A test function
+    ## types:
+    - class SkillTestClass(str): ...  # Some class.
 
-    allows:
-    - allow(skill_test_func, SkillTestClass)
+    ## functions:
+    - async def async_skill_test_func(x: int = 0) -> str: ...  # A test function
+    - def skill_test_func(x: int = 0) -> str: ...  # A test function
+
+    ## submodules:
+      pyskills.createskill: ...  # How to create a pyskills pyskill module.
 
 For a **function**,
 [`doc`](https://AnswerDotAI.github.io/pyskills/core.html#doc) renders
 the full signature with parameter comments (docments):
 
 ``` python
-print(doc(pyskills.skill.skill_test_func))
+doc(pyskills.skill.skill_test_func)
 ```
 
     def skill_test_func(
         x:int=0, # the input
-    )->str: # the output
-    """A test function"""
+    )->str: # the output"""A test function"""
 
 For a **class**,
 [`doc`](https://AnswerDotAI.github.io/pyskills/core.html#doc) shows the
@@ -122,7 +135,7 @@ class hierarchy, docstring, `__init__` signature, and all public methods
 with their first docstring line:
 
 ``` python
-print(doc(pyskills.skill.SkillTestClass))
+doc(pyskills.skill.SkillTestClass)
 ```
 
     class SkillTestClass(str):
@@ -192,15 +205,16 @@ from pyskills import createskill
 print(doc(createskill)[:300])
 ```
 
-    module pyskills.createskill:
-    """How to create a pyskills module.
+    # module pyskills.createskill:
+
+    """How to create a pyskills pyskill module.
 
     A pyskill is a standard Python module that registers itself via entry points so LLM hosts can discover and load it.
 
     ## 1. Create your module
 
     Your module needs:
-    - A docstring — first paragraph is the short description shown durin
+    - A docstring: first paragraph is the short description shown
 
 ## Creating pyskills
 

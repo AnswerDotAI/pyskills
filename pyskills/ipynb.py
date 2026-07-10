@@ -64,7 +64,7 @@ def _cell_edit(f, name=None):
         if isinstance(id, list) or id == 'all':
             if id == 'all': id = [c.id for c in nb.cells]
             res = [(cid, r) for cid in id if not (r := _one(cid)).startswith(('error:', 'none:'))]
-        else: res = _one(id)
+        else: res = PrettyString(_one(id))
         nb.save()
         return res
     res = splice_sig(wrapper, f, 'text')
@@ -198,10 +198,10 @@ def view_cell(
     view_range:list=None # Optional 1-indexed (start, end) line range, end=-1 for last line
 ):
     "Show cell source with optional line numbers"
-    res = Notebook.open(fname).view(id, nums=nums)
+    res = PrettyString(Notebook.open(fname).view(id, nums=nums))
     if not view_range: return res
     s,e = view_range
-    return '\n'.join(res.splitlines()[s-1:None if e==-1 else e])
+    return PrettyString('\n'.join(res.splitlines()[s-1:None if e==-1 else e]))
 
 
 # %% ../nbs/02_ipynb.ipynb #774f54f0
@@ -211,7 +211,7 @@ def view_cells(
     nums:bool=True # Show line numbers?
 ):
     "Show multiple cells' sources, each preceded by a `# cell <id>` header"
-    return '\n'.join(f'# cell {i}\n{view_cell(fname, i, nums=nums)}' for i in ids)
+    return PrettyString('\n'.join(f'# cell {i}\n{view_cell(fname, i, nums=nums)}' for i in ids))
 
 # %% ../nbs/02_ipynb.ipynb #5558d37a
 def _trunc_middle(s, limit, sep='\n…\n'):

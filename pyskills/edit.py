@@ -35,6 +35,7 @@ __all__ = ['file_insert_line', 'file_str_replace', 'file_strs_replace', 'file_re
 import difflib,re
 from pathlib import Path
 from fastcore.meta import splice_sig
+from fastcore.basics import PrettyString
 
 # %% ../nbs/01_edit.ipynb #8478e86e
 def file_view(
@@ -50,7 +51,7 @@ def file_view(
     if end_line < 0: end_line = len(lines)+end_line+1
     if not (1 <= start_line <= len(lines)): return f'error: Invalid start_line {start_line}. Valid range: 1-{len(lines)}'
     if end_line > len(lines): end_line = len(lines)
-    return '\n'.join(f'{i}: {l}' for i,l in enumerate(lines[start_line-1:end_line], start_line))
+    return PrettyString('\n'.join(f'{i}: {l}' for i,l in enumerate(lines[start_line-1:end_line], start_line)))
 
 # %% ../nbs/01_edit.ipynb #84615568
 def file_create(
@@ -79,10 +80,10 @@ def file_edit(f, name=None):
         path = Path(path).expanduser()
         text = path.read_text()
         try: new_text = f(text, *args, **kw)
-        except ValueError as e: return f'error: {e}'
+        except ValueError as e: return PrettyString(f'error: {e}')
         Path(path).write_text(new_text)
         diff = '\n'.join(list(difflib.unified_diff(text.splitlines(), new_text.splitlines(), n=1, lineterm=''))[2:])
-        return diff or 'none: No changes.'
+        return PrettyString(diff or 'none: No changes.')
     res = splice_sig(wrapper, f, 'text')
     if name: res.__name__ = res.__qualname__ = name
     res.__doc__ = (f.__doc__ or '') + _file_edit_doc

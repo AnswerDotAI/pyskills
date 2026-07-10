@@ -209,9 +209,7 @@ def xdir(sym:str|object):
     return [o for o,_ in _xdir(sym)]
 
 # %% ../nbs/00_core.ipynb #15e66852
-@allow
-def doc(sym:str|object)->str:
-    "Docstring of a module, class, function, instance or any other Python object."
+def _doc1(sym):
     if isinstance(sym, str): sym = resolve(sym)
     if isinstance(sym, type): return _doc_class(sym)
     if isinstance(sym, types.ModuleType): return _doc_module(sym)
@@ -221,6 +219,15 @@ def doc(sym:str|object)->str:
     if '__str__' in type(sym).__dict__: return str(sym)
     if '__repr__' in type(sym).__dict__: return repr(sym)
     return PrettyString(MarkdownRenderer(sym))
+
+@allow
+def doc(
+    sym:str|object,   # Object (or dotted name) to document
+    *syms:str|object  # More objects: each doc appended as its own blank-line-separated section
+)->str:
+    "Docstring of modules, classes, functions, instances or any other Python objects."
+    return PrettyString('\n\n'.join(str(_doc1(s)) for s in (sym, *syms)))
+
 
 # %% ../nbs/00_core.ipynb #90aae7aa
 class _N:
