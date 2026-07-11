@@ -289,7 +289,7 @@ def find_cells(
     trunc_out:bool=True, # Middle-truncate non-error outputs to ~100 chars (when included)?
     trunc_in:bool=False, # Middle-truncate cell sources to ~80 chars?
     headers_only:bool=False, # Only return markdown header cells, first line only?
-    header_section:str=None, # Return the section starting with this header line, plus its children
+    header_section:str=None, # Return the section starting with this header line (leading #s optional), plus its children
 )->str: # Matching cells in concise XML format
     "Find cells in `fname` matching all the given criteria"
     nb = _nb(fname)
@@ -300,7 +300,7 @@ def find_cells(
             h = _hdr_level(c)
             if res and 0<h<=lvl: break
             if res: res.append(c)
-            elif h and c.source.split('\n',1)[0]==header_section: res,lvl = [c],h
+            elif h and c.source.split('\n',1)[0] in (header_section, '#'*h+' '+header_section): res,lvl = [c],h
     else:
         if re_pattern and not use_regex: re_pattern = re.escape(re_pattern)
         elif re_pattern:
