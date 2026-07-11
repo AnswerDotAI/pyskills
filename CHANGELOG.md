@@ -2,6 +2,15 @@
 
 <!-- do not remove -->
 
+## 0.0.20
+
+### New Features
+
+- Allow find_cells header sections without leading hashes ([#39](https://github.com/AnswerDotAI/pyskills/issues/39))
+- Add `_elided` marker to module overview lines and expand `~` in ipynb cell tools ([#38](https://github.com/AnswerDotAI/pyskills/issues/38))
+- Add multi-object `doc()` support and return PrettyString from edit/ipynb functions ([#37](https://github.com/AnswerDotAI/pyskills/issues/37))
+
+
 ## 0.0.19
 
 ### New Features
