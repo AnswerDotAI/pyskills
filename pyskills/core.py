@@ -135,10 +135,15 @@ class SymbolNotFound(Exception):
     def __repr__(self): return f"SymbolNotFound({self.args[0]})"
     __str__ = __repr__
 
+def _import(nm):
+    "Import module `nm`, mapping a missing module to `SymbolNotFound`"
+    try: return importlib.import_module(nm)
+    except ImportError: raise SymbolNotFound(f"Symbol '{nm}' not found.") from None
+
 def resolve(
     sym_nm:str,  # Dotted symbol path, with optional [n] indexing, e.g. "module.attr.subattr[1]"
 ):
-    "Resolve a dotted symbol string to its Python object, with optional [n] indexing"
+    "Resolve a dotted symbol string to its Python object, importing modules as needed, with optional [n] indexing"
     if not isinstance(sym_nm, str): return sym_nm
     ns = vars(sys.modules['__main__'])
     obj = None
@@ -148,8 +153,12 @@ def resolve(
             if name in ns: obj = ns[name]
             else:
                 try: obj = getattr(builtins, name)
-                except AttributeError: raise SymbolNotFound(f"Symbol '{name}' not found.")
-        else: obj = getattr(obj, name)
+                except AttributeError: obj = _import(name)
+        else:
+            try: obj = getattr(obj, name)
+            except AttributeError:
+                if not isinstance(obj, types.ModuleType): raise
+                obj = _import(f'{obj.__name__}.{name}')
         if idx is not None: obj = obj[int(idx)]
     return obj
 
