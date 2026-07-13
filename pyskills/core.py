@@ -108,11 +108,12 @@ class AllowPolicy:
     def __call__(self, obj, args, kwargs, data): raise NotImplementedError
 
 class PosAllowPolicy(AllowPolicy):
-    "Check positional/keyword arg is an allowed destination"
+    "Check positional/keyword path arg is an allowed destination; non-path buffers/handles are skipped"
     def __init__(self, pos=0, kw=None): store_attr()
     def __call__(self, obj, args, kwargs, data):
         p = kwargs.get(self.kw) if self.kw and self.kw in kwargs else args[self.pos] if self.pos < len(args) else None
-        if p is not None: chk_dest(p, data['ok_dests'])
+        if isinstance(p, bytes): p = os.fsdecode(p)
+        if isinstance(p, (str, os.PathLike)): chk_dest(p, data['ok_dests'])
 
 class PathWritePolicy(AllowPolicy):
     "Check resolved Path self, optionally also target args"
