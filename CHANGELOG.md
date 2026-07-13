@@ -2,11 +2,18 @@
 
 <!-- do not remove -->
 
+## 0.0.21
+
+### New Features
+
+- Add `set_nb` default-notebook pattern, `%%add_cell` magic, split/merge cells, and `find_cells` summary mode; move fname to trailing kwarg across all ipynb functions ([#41](https://github.com/AnswerDotAI/pyskills/issues/41))
+
+
 ## 0.0.20
 
 ### New Features
 
-- Allow find_cells header sections without leading hashes ([#39](https://github.com/AnswerDotAI/pyskills/issues/39))
+- Allow `find_cells` header sections without leading hashes ([#39](https://github.com/AnswerDotAI/pyskills/issues/39))
 - Add `_elided` marker to module overview lines and expand `~` in ipynb cell tools ([#38](https://github.com/AnswerDotAI/pyskills/issues/38))
 - Add multi-object `doc()` support and return PrettyString from edit/ipynb functions ([#37](https://github.com/AnswerDotAI/pyskills/issues/37))
 
