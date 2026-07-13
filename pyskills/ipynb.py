@@ -1,13 +1,18 @@
 """Functions for view/modifying ipynb file notebook cells. Each operation returns unified diffs showing what changed. Where `exhash` is available, prefer its hash-verified editing for cell source changes.
 
+## The current notebook
+
+If you will do >1 call on the same nb, register that notebook once with `set_nb('nb.ipynb')`; every function here then defaults its trailing `fname` to it, so calls read as "do this to cell X" with the location stated once. Passing `fname=` explicitly always works and never disturbs the default; with neither, calls fail loudly rather than guess. In clikernel, `%nbrun` shares the same default.
+
 ## Ipynb file cell editing
 
-Cell tools take an ipynb path (expands `~`) and a cell id, e.g:
+Cell tools take the cell id first, then their payload, e.g:
 
-cell_replace_lines('nb.ipynb', cell_id, 2, 3, 'replaced')
-cell_insert_line('nb.ipynb', cell_id, 0, 'first line')
+    cell_str_replace(cell_id, 'old', 'new')
+    cell_insert_line(cell_id, 0, 'first line')
+    cell_replace_lines(cell_id, start_line=2, end_line=3, new_content='replaced')
 
-Use `summary_nb` for a one-line-per-cell overview of a large notebook, and `view_nb` to view the whole notebook (pass `only_errors=True` after running tests to jump straight to the cells that errored, with their tracebacks). Use `view_cell` to see a cell's source with line numbers before editing (`view_range` limits it to a line range). Use `find_cells` to search a notebook by regex, cell type, error state, or nbdev export directive (with grep-style `before`/`after`/`context` neighbors - `context` defaults to 1), to get a headers-only outline, or to pull out one `header_section` with its child cells. When outputs are included they are middle-truncated by default (`trunc_out`), but error outputs never are. Use `create_notebook` to start a new ipynb file, `add_cell` to insert a new cell before/after an existing cell id, and `del_cells` to delete cells.
+Use `summary_nb` for a one-line-per-cell overview of a large notebook, and `view_nb` to read the whole notebook (pass `only_errors=True` after running tests to jump to cells that errored). Use `view_cell` to see one cell with line numbers (`view_range` limits it to a range). `find_cells` searches by regex, cell type, error state, nbdev export directive, id, or header section; `summary=True` renders the selected cells in the same one-line form as `summary_nb`, and `maxlen` controls the source preview. Its grep-style `before`/`after`/`context` options count cells and default to one neighbour. Use `create_notebook` to start a notebook, `add_cell` to insert cells, `del_cells` to remove them, and `split_cell`/`merge_cells` to reshape cell boundaries (e.g. separating a markdown header from body text). Under IPython, prefer the `%%add_cell` cell magic for new cells with non-trivial sources: `%%add_cell [<path>] before=<id>|after=<id> [code|markdown|raw]` takes the body verbatim (no Python quoting), uses the current notebook when `<path>` is omitted, and returns the new id.
 
 ## Line filtering
 
@@ -15,7 +20,7 @@ Use `summary_nb` for a one-line-per-cell overview of a large notebook, and `view
 
 ## Structural transforms
 
-`python_cell(path, id, func)` rewrites a cell's source with an arbitrary `str -> str` function, and `python_cells(path, func, *ids)` sweeps every code cell (or just `ids`). `ast_cell`/`ast_cells` take a list of ast-grep `(pattern, replacement)` rules instead, e.g. `ast_cell(path, cid, [("print($X)", "log($X)")])` (requires the optional `remold` package, whose `astmap`/`cstmap` also build reusable funcs for `python_cell`).
+`python_cell(id, func)` rewrites a cell's source with an arbitrary `str -> str` function, and `python_cells(func, *ids)` sweeps every code cell (or just `ids`). `ast_cell`/`ast_cells` take a list of ast-grep `(pattern, replacement)` rules instead, e.g. `ast_cell(cid, [("print($X)", "log($X)")])` (requires the optional `remold` package, whose `astmap`/`cstmap` also build reusable funcs for `python_cell`).
 
 Docs: https://AnswerDotAI.github.io/pyskills/ipynb.html.md"""
 
@@ -23,11 +28,12 @@ Docs: https://AnswerDotAI.github.io/pyskills/ipynb.html.md"""
 
 # %% auto #0
 __all__ = ['cell_insert_line', 'cell_str_replace', 'cell_strs_replace', 'cell_replace_lines', 'cell_del_lines', 'python_cell',
-           'ast_cell', 'python_cells', 'ast_cells', 'create_notebook', 'add_cell', 'del_cells', 'copy_cells',
-           'cut_cells', 'paste_cells', 'view_cell', 'view_cells', 'view_nb', 'summary_nb', 'find_cells']
+           'ast_cell', 'set_nb', 'cur_nb', 'python_cells', 'ast_cells', 'create_notebook', 'add_cell', 'del_cells',
+           'add_cell_magic', 'load_ipython_extension', 'copy_cells', 'cut_cells', 'paste_cells', 'split_cell',
+           'merge_cells', 'view_cell', 'view_cells', 'view_nb', 'summary_nb', 'find_cells']
 
 # %% ../nbs/02_ipynb.ipynb #fed1068a
-import difflib,re
+import difflib,re,shlex
 from fastcore.utils import *
 from fastcore.meta import splice_sig
 from fastcore.xtras import dict2obj,truncstr
@@ -48,11 +54,25 @@ returns:
 - For id list (or 'all'): list of tuples of (id,diff) for changed messages"""
 
 # %% ../nbs/02_ipynb.ipynb #b0fa459d
-def _nb(fname): return Notebook.open(Path(fname).expanduser())
+_cur_nb = None
+
+def set_nb(
+    fname, # ipynb path that later calls will default to
+):
+    "Set the current notebook, used by any of these functions when `fname` is None"
+    global _cur_nb
+    _cur_nb = Path(fname).expanduser()
+    return _cur_nb
+
+def cur_nb(): return _cur_nb
+
+def _nb(fname=None):
+    if not (fname := fname or _cur_nb): raise ValueError('No notebook: pass `fname` or call `set_nb`')
+    return Notebook.open(Path(fname).expanduser())
 
 # %% ../nbs/02_ipynb.ipynb #393c0016
 def _cell_edit(f, name=None):
-    def wrapper(fname:str, id:str|list[str], *args, update_output:bool=False, **kw):
+    def wrapper(id:str|list[str], *args, fname:str=None, update_output:bool=False, **kw):
         nb = _nb(fname)
         def _one(cid):
             cell = nb[cid]
@@ -98,21 +118,21 @@ ast_cell = _cell_edit(ast_replace, 'ast_cell')
 
 # %% ../nbs/02_ipynb.ipynb #10e2a180
 def python_cells(
-    fname:str, # ipynb to edit
     func:callable, # Function taking cell source, returning replacement source
-    *ids:str # cells to transform (default: all code cells)
+    *ids:str, # cells to transform (default: all code cells)
+    fname:str=None # ipynb to edit; the current notebook if None
 ):
     "Apply `func` to the source of each of `ids`, returning `(id, diff)` pairs for changed cells"
     if not ids: ids = [str(c.id) for c in _nb(fname).cells if c.cell_type=='code']
-    return python_cell(fname, list(ids), func)
+    return python_cell(list(ids), func, fname=fname)
 
 def ast_cells(
-    fname:str, # ipynb to edit
     repls:list, # (pattern, replacement) ast-grep rules; replacement is a `$VAR` template or a callable(match)->str
-    *ids:str # cells to transform (default: all code cells)
+    *ids:str, # cells to transform (default: all code cells)
+    fname:str=None # ipynb to edit; the current notebook if None
 ):
     "Apply ast-grep `repls` to the source of each of `ids`, returning `(id, diff)` pairs for changed cells"
-    return python_cells(fname, lambda t: ast_replace(t, repls), *ids)
+    return python_cells(lambda t: ast_replace(t, repls), *ids, fname=fname)
 
 # %% ../nbs/02_ipynb.ipynb #b054ff6f
 def create_notebook(
@@ -129,11 +149,11 @@ def create_notebook(
 
 # %% ../nbs/02_ipynb.ipynb #3bdf5927
 def add_cell(
-    fname:str, # ipynb to edit
     source:str, # source for the new cell
     cell_type:str='code', # 'code', 'markdown', or 'raw'
     before:str=None, # id of cell to insert before
-    after:str=None # id of cell to insert after
+    after:str=None, # id of cell to insert after
+    fname:str=None, # ipynb to edit; the current notebook if None
 ):
     "Add a new cell before/after an existing cell (pass exactly one), returning the new cell's id"
     if (before is None)==(after is None): raise ValueError('Pass exactly one of `before` or `after`')
@@ -146,20 +166,45 @@ def add_cell(
 
 # %% ../nbs/02_ipynb.ipynb #9e1fb838
 def del_cells(
-    fname:str, # ipynb to edit
-    *ids:str # ids of cells to delete
+    *ids:str, # ids of cells to delete
+    fname:str=None, # ipynb to edit; the current notebook if None
 ):
     "Delete cells by id"
     nb = _nb(fname)
     for i in ids: del nb[i]
     nb.save()
 
+# %% ../nbs/02_ipynb.ipynb #0f930d64
+def add_cell_magic(line, cell):
+    """Add a new notebook cell with the magic body as its source, taken verbatim.
+
+    Usage: %%add_cell [<path>] before=<id>|after=<id> [code|markdown|raw]
+    `<path>` may be omitted when a current notebook is set via `set_nb`. Returns the new cell's id."""
+    args = shlex.split(line)
+    kw = {}
+    if args and '=' not in args[0] and args[0] not in ('code','markdown','raw'): kw['fname'] = args.pop(0)
+    for a in args:
+        if a in ('code','markdown','raw'): kw['cell_type'] = a
+        elif a.startswith(('before=','after=')):
+            k,v = a.split('=', 1)
+            kw[k] = v
+        else: raise ValueError(f'unknown argument: {a!r}')
+    if cell.endswith('\n'): cell = cell[:-1]
+    return add_cell(cell, **kw)
+
+def load_ipython_extension(ipython): ipython.register_magic_function(add_cell_magic, 'cell', 'add_cell')
+
+# %% ../nbs/02_ipynb.ipynb #d1a5edd9
+if 'IPython' in sys.modules:
+    from IPython import get_ipython
+    if (_ip := get_ipython()): load_ipython_extension(_ip)
+
 # %% ../nbs/02_ipynb.ipynb #cf681c19
 _paste_buf = []
 
 def copy_cells(
-    fname:str, # ipynb to copy from
-    *ids:str # ids of cells to copy
+    *ids:str, # ids of cells to copy
+    fname:str=None, # ipynb to copy from; the current notebook if None
 ):
     "Copy cells into the paste buffer (replacing its contents), for later `paste_cells`"
     nb = _nb(fname)
@@ -169,36 +214,87 @@ def copy_cells(
 
 # %% ../nbs/02_ipynb.ipynb #39735474
 def cut_cells(
-    fname:str, # ipynb to cut from
-    *ids:str # ids of cells to cut
+    *ids:str, # ids of cells to cut
+    fname:str=None, # ipynb to cut from; the current notebook if None
 ):
-    "Copy cells into the paste buffer, then delete them from `fname`"
-    copy_cells(fname, *ids)
-    del_cells(fname, *ids)
+    "Copy cells into the paste buffer, then delete them from the notebook"
+    copy_cells(*ids, fname=fname)
+    del_cells(*ids, fname=fname)
 
 
 # %% ../nbs/02_ipynb.ipynb #89232061
 def paste_cells(
-    fname:str, # ipynb to paste into
     before:str=None, # id of cell to insert before
-    after:str=None # id of cell to insert after
+    after:str=None, # id of cell to insert after
+    fname:str=None, # ipynb to paste into; the current notebook if None
 ):
     "Insert the buffered cells (from `copy_cells`/`cut_cells`) before/after a cell id, returning the new ids"
     if not _paste_buf: raise ValueError('Paste buffer is empty -- use `copy_cells`/`cut_cells` first')
     if (before is None)==(after is None): raise ValueError('Pass exactly one of `before` or `after`')
     ids,anchor,is_after = [],(after if after is not None else before),(after is not None)
     for cell_type,source in _paste_buf:
-        nid = add_cell(fname, source, cell_type, **({'after':anchor} if is_after else {'before':anchor}))
+        nid = add_cell(source, cell_type, fname=fname, **({'after':anchor} if is_after else {'before':anchor}))
         ids.append(nid)
         anchor,is_after = nid,True
     return ids
 
+# %% ../nbs/02_ipynb.ipynb #050e0e9d
+_re_exp = re.compile(r'#\|\s*exports?\b')
+
+def _split_dir(s):
+    "Split `s` into its leading export directive line (or `None`) and the rest"
+    if not _re_exp.match(s): return None,s
+    d,*rest = s.split('\n', 1)
+    return d,(rest[0] if rest else '')
+
+def split_cell(
+    id:str, # cell id to split
+    *linenos:int, # 1-based line numbers to split before
+    fname:str=None, # ipynb to edit; the current notebook if None
+):
+    "Split a cell before each of `linenos`; the first piece keeps `id`, a leading `#| export` is copied to every piece, and the new ids are returned"
+    nb = _nb(fname)
+    cell = nb[id]
+    lines = cell.source.splitlines(keepends=True)
+    cuts = [0, *[l-1 for l in sorted(linenos)], len(lines)]
+    if not all(0 < b < len(lines) for b in cuts[1:-1]): raise ValueError(f'split points must fall inside the cell (1 < lineno <= {len(lines)})')
+    srcs = [''.join(lines[a:b]).rstrip('\n') for a,b in zip(cuts, cuts[1:])]
+    if (d := _split_dir(cell.source)[0]): srcs[1:] = [f'{d}\n{s}' for s in srcs[1:]]
+    cell.source = srcs[0]
+    cell.outputs = []
+    idx = nb.cells.index(cell)
+    new = [mk_cell(s, cell.cell_type) for s in srcs[1:]]
+    nb.cells[idx+1:idx+1] = new
+    nb.save()
+    return [c.id for c in new]
+
+# %% ../nbs/02_ipynb.ipynb #c6fa0517
+def merge_cells(
+    *ids:str, # ids of adjacent same-type cells, in document order
+    fname:str=None, # ipynb to edit; the current notebook if None
+    sep:str='\n', # separator joining the sources
+):
+    "Merge adjacent cells into the first, which keeps its id (and a single `#| export` if any had one); returns the merged source"
+    nb = _nb(fname)
+    cells = [nb[i] for i in ids]
+    idxs = [nb.cells.index(c) for c in cells]
+    if idxs != list(range(idxs[0], idxs[0]+len(ids))): raise ValueError('cells must be adjacent and in document order')
+    if len({c.cell_type for c in cells}) > 1: raise ValueError('cells must all be the same type')
+    dirs,srcs = zip(*[_split_dir(c.source) for c in cells])
+    src = sep.join(srcs)
+    if (d := first(o for o in dirs if o)): src = f'{d}\n{src}'
+    cells[0].source = src
+    cells[0].outputs = []
+    for i in ids[1:]: del nb[i]
+    nb.save()
+    return PrettyString(cells[0].source)
+
 # %% ../nbs/02_ipynb.ipynb #e8a9b077
 def view_cell(
-    fname:str, # ipynb to get info for
     id:str, # cell id to view
+    fname:str=None, # ipynb to get info for; the current notebook if None
     nums:bool=True, # Show line numbers?
-    view_range:list=None # Optional 1-indexed (start, end) line range, end=-1 for last line
+    view_range:list=None, # Optional 1-indexed (start, end) line range, end=-1 for last line
 ):
     "Show cell source with optional line numbers"
     res = PrettyString(_nb(fname).view(id, nums=nums))
@@ -209,12 +305,12 @@ def view_cell(
 
 # %% ../nbs/02_ipynb.ipynb #774f54f0
 def view_cells(
-    fname:str, # ipynb to get info for
     *ids:str, # ids of cells to view
-    nums:bool=True # Show line numbers?
+    fname:str=None, # ipynb to get info for; the current notebook if None
+    nums:bool=True, # Show line numbers?
 ):
     "Show multiple cells' sources, each preceded by a `# cell <id>` header"
-    return PrettyString('\n'.join(f'# cell {i}\n{view_cell(fname, i, nums=nums)}' for i in ids))
+    return PrettyString('\n'.join(f'# cell {i}\n{view_cell(i, fname, nums=nums)}' for i in ids))
 
 # %% ../nbs/02_ipynb.ipynb #5558d37a
 def _trunc_middle(s, limit, sep='\n…\n'):
@@ -240,7 +336,7 @@ def _prepped(c, nums:bool=False, trunc_in:bool=False, trunc_out:bool=True):
 
 # %% ../nbs/02_ipynb.ipynb #89723255
 def view_nb(
-    fname:str, # ipynb to get info for
+    fname:str=None, # ipynb to get info for; the current notebook if None
     incl_out:bool=False, # Include cell outputs?
     only_errors:bool=False, # Show only cells with an error output (implies `incl_out`)?
     trunc_out:bool=True, # Middle-truncate non-error outputs to ~100 chars (when included)?
@@ -254,13 +350,16 @@ def view_nb(
     return PrettyString(cells2xml(cells, path=nb.path if incl_out and not only_errors else nb.path.name, incl_out=incl_out))
 
 # %% ../nbs/02_ipynb.ipynb #3988c2e4
+def _summary_cells(cells, maxlen=120):
+    def _line(c): return f"{c.id}:{c.cell_type[0]}:{truncstr(c.source.replace(chr(10), r'\n'), maxlen)}"
+    return PrettyString('\n'.join(_line(c) for c in cells))
+
 def summary_nb(
-    fname:str,      # ipynb to summarize
+    fname:str=None,  # ipynb to summarize; the current notebook if None
     maxlen:int=120, # truncate each cell's source to this
 )->PrettyString:
     "One line per cell: id, type, and truncated/escaped source"
-    def _l(c): return f"{c.id}:{c.cell_type[0]}:{truncstr(c.source.replace(chr(10), r'\n'), maxlen)}"
-    return PrettyString('\n'.join(_l(c) for c in _nb(fname).cells))
+    return _summary_cells(_nb(fname).cells, maxlen)
 
 # %% ../nbs/02_ipynb.ipynb #f892b107
 def _hdr_level(c):
@@ -269,11 +368,9 @@ def _hdr_level(c):
     m = re.match(r'(#{1,6})\s', c.source)
     return len(m.group(1)) if m else 0
 
-_re_exp = re.compile(r'#\|\s*exports?\b')
-
 def find_cells(
-    fname:str, # ipynb to search
     re_pattern:str='', # Optional regex to search cell sources for (re.DOTALL+re.MULTILINE is used)
+    fname:str=None, # ipynb to search; the current notebook if None
     cell_type:str=None, # Optional limit by cell type ('code', 'markdown', or 'raw')
     before:int=0, # Include additional n cells before matches
     after:int=0, # Include additional n cells after matches
@@ -288,9 +385,11 @@ def find_cells(
     nums:bool=False, # Show line numbers?
     trunc_out:bool=True, # Middle-truncate non-error outputs to ~100 chars (when included)?
     trunc_in:bool=False, # Middle-truncate cell sources to ~80 chars?
+    summary:bool=False, # Show one newline-escaped, truncated line per cell?
+    maxlen:int=120, # Maximum source characters per summary line
     headers_only:bool=False, # Only return markdown header cells, first line only?
     header_section:str=None, # Return the section starting with this header line (leading #s optional), plus its children
-)->str: # Matching cells in concise XML format
+)->PrettyString: # Matching cells as concise XML or one-line summaries
     "Find cells in `fname` matching all the given criteria"
     nb = _nb(fname)
     cells = nb.cells
@@ -309,6 +408,7 @@ def find_cells(
         flags = re.DOTALL|re.MULTILINE|(0 if use_case else re.IGNORECASE)
         if isinstance(ids,str): ids = ids.split(',') if ids else []
         ids = set(ids)
+        if ids and (missing := ids - {c.id for c in cells}): raise KeyError(f"cell id(s) not found: {', '.join(sorted(missing))}")
         def _match(c):
             if cell_type and c.cell_type!=cell_type: return False
             if only_err and not _has_err(c): return False
@@ -322,6 +422,8 @@ def find_cells(
         if before or after: idxs = sorted({j for i in idxs for j in range(max(0,i-before), min(len(cells),i+after+1))})
         res = [cells[i] for i in idxs]
     if headers_only: res = [dict2obj(dict(c, source=c.source.split('\n',1)[0])) for c in res]
+    if summary and (incl_out or nums or trunc_in): raise ValueError('summary cannot be combined with incl_out, nums, or trunc_in')
+    if summary: return _summary_cells(res, maxlen)
     if nums or trunc_in or (incl_out and trunc_out):
         res = [_prepped(c, nums=nums, trunc_in=trunc_in, trunc_out=incl_out and trunc_out) for c in res]
     return PrettyString(cells2xml(res, path=nb.path.name, incl_out=incl_out))
