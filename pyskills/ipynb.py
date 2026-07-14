@@ -261,7 +261,7 @@ def split_cell(
     srcs = [''.join(lines[a:b]).rstrip('\n') for a,b in zip(cuts, cuts[1:])]
     if (d := _split_dir(cell.source)[0]): srcs[1:] = [f'{d}\n{s}' for s in srcs[1:]]
     cell.source = srcs[0]
-    cell.outputs = []
+    if cell.cell_type=='code': cell.outputs = []
     idx = nb.cells.index(cell)
     new = [mk_cell(s, cell.cell_type) for s in srcs[1:]]
     nb.cells[idx+1:idx+1] = new
@@ -284,7 +284,7 @@ def merge_cells(
     src = sep.join(srcs)
     if (d := first(o for o in dirs if o)): src = f'{d}\n{src}'
     cells[0].source = src
-    cells[0].outputs = []
+    if cells[0].cell_type=='code': cells[0].outputs = []
     for i in ids[1:]: del nb[i]
     nb.save()
     return PrettyString(cells[0].source)
