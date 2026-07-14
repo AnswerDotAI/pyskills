@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.22
+
+### Bugs Squashed
+
+- Fix `split_cell`/`merge_cells` to only clear outputs on code cells, preventing invalid nbformat ([#43](https://github.com/AnswerDotAI/pyskills/issues/43))
+
+
 ## 0.0.21
 
 ### New Features
