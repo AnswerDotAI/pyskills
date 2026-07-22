@@ -15,7 +15,7 @@ In reading order:
 
 ## The premise
 
-An LLM equipped with a persistent interpreter does not need a bespoke tool for each operation. It needs capabilities as importable functions, docs it can pull on demand (`doc()`), and a discovery mechanism (`list_pyskills()`) that reports what is installed without importing anything. Hosts supply the kernel and the session rules: clikernel for terminal AIs such as Claude Code, Solveit with its own kernel and dialog tools, or a plain script. The packages are host-neutral, and everything below works the same from any of them.
+An LLM equipped with a persistent interpreter does not need a bespoke tool for each operation. It needs capabilities as importable functions, docs it can pull on demand (`doc()`), and a discovery mechanism (`list_pyskills()`) that reports what is installed without importing anything. Harnesss supply the kernel and the session rules: clikernel for terminal AIs such as Claude Code, Solveit with its own kernel and dialog tools, or a plain script. The packages are harness-neutral, and everything below works the same from any of them.
 
 ## The media and their units
 
@@ -83,7 +83,7 @@ Reads differ by shape on purpose: the function returns dead snapshot rows (`MsgR
 
 ## The interpreter doctrine
 
-Because the AI writes code, a wrapper whose only content is "run this code" is a wrapper around the language itself. Two such functions existed (`python_msgs` in llmsurgery, `msg_python` in dialoghelper), from the era when hosts offered fixed tool rosters and code-as-string was the only escape hatch; both are gone. What earns a name instead is carrying a *declarative* edit spec to a carrier: `msg_str_replace` and its family add addressing, persistence routing, and a returned diff around arguments that are data, auditable in a way code-as-string is not. Anything whose input is code composes in code: live `Message` objects from `find_msgs` edited in a loop, `str -> str` transforms mapped over sources.
+Because the AI writes code, a wrapper whose only content is "run this code" is a wrapper around the language itself. Two such functions existed (`python_msgs` in llmsurgery, `msg_python` in dialoghelper), from the era when harnesses offered fixed tool rosters and code-as-string was the only escape hatch; both are gone. What earns a name instead is carrying a *declarative* edit spec to a carrier: `msg_str_replace` and its family add addressing, persistence routing, and a returned diff around arguments that are data, auditable in a way code-as-string is not. Anything whose input is code composes in code: live `Message` objects from `find_msgs` edited in a loop, `str -> str` transforms mapped over sources.
 
 The ast tools split exactly on this line, and remold arrived at it independently. `astmap` takes declarative ast-grep rules, so it has carrier forms (`ast_replace` and its carrier family `file_ast_replace`, `cell_ast_replace`, `msg_ast_replace`); `cstmap` takes a matcher and a Python function, so it has none: you call it like any other transform. The same doctrine gives search its extension point: `find_msgs(pred=)` accepts a callable, and the `*_finder` factories (`symdef_finder`, `symref_finder`, `ast_finder`) build them, so search grows by composing predicates rather than by adding parameters.
 
@@ -131,4 +131,4 @@ A separate `skill.py` earns its place only when a package's import surface and i
 
 ### Demonstrations over instructions
 
-Session-start instructions tell a model what to do; its context shows it what gets done, and the showing wins. llmdojo's DEV.md states the observation that drives the host machinery: "A fresh session gets its tooling *instructions* up front but no *examples*, and models imitate what their context shows far more reliably than what it tells." So hosts open sessions with a completed, curated practice round already in history (claudedojo, codexdojo), and the round is held to a higher bar than correct: whatever it demonstrates, sessions repeat. Templates are rebuilt when the tooling changes, since a stale demonstration teaches stale names.
+Session-start instructions tell a model what to do; its context shows it what gets done, and the showing wins. llmdojo's DEV.md states the observation that drives the harness machinery: "A fresh session gets its tooling *instructions* up front but no *examples*, and models imitate what their context shows far more reliably than what it tells." So harnesss open sessions with a completed, curated practice round already in history (claudedojo, codexdojo), and the round is held to a higher bar than correct: whatever it demonstrates, sessions repeat. Templates are rebuilt when the tooling changes, since a stale demonstration teaches stale names.
