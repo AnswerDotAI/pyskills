@@ -203,10 +203,14 @@ def _xdir(sym):
     return [(n, getattr(sym, n, None)) for n in sorted(dir(sym)) if not n.startswith('_')]
 
 @allow
-def xdir(sym:str|object):
+def xdir(
+    sym:str|object, # Module, class, or instance to inspect
+    q:str=None # Optional case-insensitive regex over names
+):
     "Filtered names for public symbols of a module or class (or anything with `__dir__`)"
     if isinstance(sym, str): sym = resolve(sym)
-    return [o for o,_ in _xdir(sym)]
+    res = [o for o,_ in _xdir(sym)]
+    return [o for o in res if re.search(q, o, re.I)] if q else res
 
 # %% ../nbs/00_core.ipynb #15e66852
 def _doc1(sym):
