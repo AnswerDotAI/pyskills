@@ -245,10 +245,10 @@ def _fmt_ann(a):
 
 def _ann(a): return _N(_fmt_ann(a)) if a is not inspect._empty else a
 
-def fmt_sig(f):
+def fmt_sig(f, ps=None):
     try: s = signature(f)
     except (ValueError, TypeError): return '(...)'
-    ps = [p.replace(annotation=_ann(p.annotation)) for p in s.parameters.values()]
+    ps = [p.replace(annotation=_ann(p.annotation)) for p in (s.parameters.values() if ps is None else ps)]
     return str(s.replace(parameters=ps, return_annotation=_ann(s.return_annotation)))
 
 # %% ../nbs/00_core.ipynb #ae0c509a
@@ -281,6 +281,7 @@ def _elided(obj, d):
 def _doc_module(mod):
     parts = [f'# module {mod.__name__}:\n']
     if mod.__doc__: parts.append(f'"""{inspect.cleandoc(mod.__doc__)}\n"""')
+    groups,refs = getattr(mod, '__pyskill_params__', {}),{}
     typs,funcs,subs = [],[],[]
     for name,obj in _xdir(mod):
         ds = getattr(obj, '__doc__', None)
@@ -295,11 +296,43 @@ def _doc_module(mod):
         elif callable(obj):
             pre = 'async def' if inspect.iscoroutinefunction(obj) else 'def'
             if _elided(obj, d): comment = f'{comment}…' if comment else ': …  # …'
-            funcs.append(f'- {pre} {name}{fmt_sig(obj)}{comment}')
+            sig = (groups and _grouped_sig(obj, name, groups, refs)) or fmt_sig(obj)
+            funcs.append(f'- {pre} {name}{sig}{comment}')
     if typs: parts += ['\n## types:', *typs]
     if funcs: parts += ['\n## functions:', *funcs]
+    if refs:
+        parts.append('\n## shared params:')
+        for g,r in refs.items(): parts += _fmt_group(g, *r)
     if subs: parts += ['\n## submodules:', *subs]
     return PrettyString('\n'.join(parts))
+
+# %% ../nbs/00_core.ipynb #155cdb61
+def _grouped_sig(f, name, groups, refs):
+    "Signature of `f` with each fully-matched param group collapsed to `**group`, recording each group's first match in `refs`"
+    try: ps = list(signature(f).parameters.values())
+    except (ValueError, TypeError): return None
+    done = []
+    for g,names in groups.items():
+        gp = {p.name: p for p in ps if p.name in names}
+        if len(gp) < len(names): continue
+        gname,_,ref = refs.setdefault(g, (name, f, [gp[n] for n in names]))
+        if any(gp[n].annotation != r.annotation or gp[n].default != r.default for n,r in zip(names, ref)):
+            warnings.warn(f"`{name}` group `{g}` params differ from `{gname}`; rendering inline")
+            continue
+        ps = [p for p in ps if p.name not in names]
+        done.append(g)
+    if not done: return None
+    ps += [inspect.Parameter(g, inspect.Parameter.VAR_KEYWORD) for g in done]
+    try: return fmt_sig(f, ps)
+    except ValueError: return None
+
+def _fmt_group(g, name, f, ps):
+    "`## shared params:` lines for group `g`: its params with docments, from first matching function `name`"
+    try: dm = docments(f)
+    except Exception: dm = {}
+    lines = [f'- **{g} (from `{name}`):']
+    lines += [f"    {p.replace(annotation=_ann(p.annotation))}," + (f' # {c}' if (c := dm.get(p.name)) else '') for p in ps]
+    return lines
 
 # %% ../nbs/00_core.ipynb #ccca39db
 def _doc_instance(sym, items):
