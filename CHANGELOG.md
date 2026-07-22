@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.23
+
+### New Features
+
+- Add shared param groups to doc() so repeated parameters collapse into `**group` with a single shared-params section ([#45](https://github.com/AnswerDotAI/pyskills/issues/45))
+- Remove edit and ipynb modules, now provided by fastcore.tools and llmsurgery.dlgskill ([#44](https://github.com/AnswerDotAI/pyskills/issues/44))
+
+
 ## 0.0.22
 
 ### Bugs Squashed
@@ -163,5 +171,3 @@
 ## 0.0.1
 
 - init release
-
-
