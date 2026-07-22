@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.24
+
+### New Features
+
+- Add `q` regex filter param to `xdir` for case-insensitive name search; note `doc()` returns PrettyString in skill docs ([#46](https://github.com/AnswerDotAI/pyskills/issues/46))
+
+
 ## 0.0.23
 
 ### New Features
