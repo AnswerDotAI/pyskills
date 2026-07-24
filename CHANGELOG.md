@@ -2,6 +2,11 @@
 
 <!-- do not remove -->
 
+## 0.0.25
+
+- Skill updates
+
+
 ## 0.0.24
 
 ### New Features
