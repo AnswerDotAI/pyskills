@@ -24,6 +24,8 @@ Summarize what a pyskill's docs or results say rather than dumping the full outp
 
 NB: `doc()` works on *all* python modules, not only pyskills. The only thing that's special about pyskills is the entrypoint registration that makes them appear in `list_pyskills()`; they can cross-reference other modules that may not be listed, but can still be imported and `doc()` run.
 
+`xdir(sym, q=None)` complements `doc()` for discovery: it lists an object's public names, filtered by an optional case-insensitive regex. Use it when a module, class, or dynamic API surface is too big to `doc()` whole, e.g. `xdir(page.emulation, 'viewport')` on a fastcdp CDP domain, then `doc()` the match before calling it.
+
 ## Testing
 
 `SkillTestClass` and `skill_test_func` exist to verify the system works: `doc()` them as a smoke test.
