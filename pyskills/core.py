@@ -1,4 +1,36 @@
-"""API details
+"""Skill discovery, LLM-friendly doc rendering, the allow registry, and pyskill registration
+
+A plugin system allowing Python packages to register "skills" — units of LLM-usable functionality — via standard Python entry points. An LLM harness (e.g. solveit) discovers available pyskills without importing them, reads lightweight descriptions via AST inspection, and selectively loads chosen pyskills into context.
+
+```python
+def list_pyskills() -> dict[str, str]
+```
+Returns `{name: description}` for all registered pyskills, using `find_spec` + AST parsing — no imports.
+
+```python
+import mypackage.skill
+```
+Standard python native import
+
+```python
+doc(mypackage.skill)       # module overview: classes, functions, submodules
+doc(SomeClass)             # class detail: bases, __init__, methods, properties
+doc(some_func)             # function detail: full signature with docments
+xdir(mypackage.skill)      # filtered names for public symbols
+```
+Inspect at increasing detail — works on any Python module, not just pyskills.
+
+`allow` registers the callables a pyskill trusts to perform side-effecting operations under a sandbox (e.g. safepyrun): pass functions, `{cls: ['method']}` dicts (`...` for all public methods), or callable instances, and they land in the `__pytools__` registry; an object defining `__allow__` delegates registration to the items it returns. Outside a sandbox `allow` is a no-op, and inside one, sandboxed code can't broaden its own permissions, since `allow` itself raises an audit event.
+
+`xdir` returns public names for a module, class, or instance. Modules respect `__all__` and include explicitly imported sibling submodules; classes include `__init__` and public methods; instances opt in by defining `__dir__`. Pass `q` to filter the names with a case-insensitive regex.
+
+A module with a very large API surface can set `__pyskill_sigs__ = False` to elide the types/functions listing from its `doc()` output: its docstring is then the whole answer, with one line noting the elision. Pass `all=True` to `doc` to list the elided symbols anyway.
+
+A *package* with a substantive docstring — more than the default summary line plus docs link — is treated as curated, so `doc()` elides its mechanical submodule listing too: a curated package docstring, like the ones nbdev generates from a project's notebooks, already says which modules matter. `all=True` restores the listing:
+
+A trailing `…` on an overview function line marks elided detail: the function has docments, or a docstring beyond its first line, so `doc(func)` will show more than the overview line did.
+
+Pyskills can be added as standard modules with pyproject entrypoints. But for convenience, they can also be added to a custom pyskills XDG directory, which is automatically added to sys.path.
 
 Docs: https://AnswerDotAI.github.io/pyskills/core.html.md"""
 
@@ -213,10 +245,10 @@ def xdir(
     return [o for o in res if re.search(q, o, re.I)] if q else res
 
 # %% ../nbs/00_core.ipynb #15e66852
-def _doc1(sym):
+def _doc1(sym, all=False):
     if isinstance(sym, str): sym = resolve(sym)
     if isinstance(sym, type): return _doc_class(sym)
-    if isinstance(sym, types.ModuleType): return _doc_module(sym)
+    if isinstance(sym, types.ModuleType): return _doc_module(sym, all)
     if hasattr(sym, '_repr_markdown_'): return PrettyString(sym._repr_markdown_())
     if callable(sym) and can_render(sym): return PrettyString(MarkdownRenderer(sym))
     if (items := _xdir(sym)): return _doc_instance(sym, items)
@@ -227,10 +259,11 @@ def _doc1(sym):
 @allow
 def doc(
     sym:str|object,   # Object (or dotted name) to document
-    *syms:str|object  # More objects: each doc appended as its own blank-line-separated section
+    *syms:str|object,  # More objects: each doc appended as its own blank-line-separated section
+    all:bool=False    # Show symbol listings elided by `__pyskill_sigs__=False`?
 )->str:
     "Docstring of modules, classes, functions, instances or any other Python objects."
-    return PrettyString('\n\n'.join(str(_doc1(s)) for s in (sym, *syms)))
+    return PrettyString('\n\n'.join(str(_doc1(s, all)) for s in (sym, *syms)))
 
 
 # %% ../nbs/00_core.ipynb #90aae7aa
@@ -282,7 +315,7 @@ def _elided(obj, d):
     try: return any(v is not None for v in docments(obj).values())
     except Exception: return False
 
-def _doc_module(mod):
+def _doc_module(mod, all=False):
     parts = [f'# module {mod.__name__}:\n']
     if mod.__doc__: parts.append(f'"""{inspect.cleandoc(mod.__doc__)}\n"""')
     groups,refs = getattr(mod, '__pyskill_params__', {}),{}
@@ -294,7 +327,9 @@ def _doc_module(mod):
         comment = f': ...  # {d[0].strip()}' if d and d[0].strip() else ''
         if isinstance(obj, types.ModuleType): subs.append(f'  {name}{comment}')
         elif isinstance(obj, type):
-            bases = ','.join(b.__name__ for b in obj.__mro__[1:-1])
+            bases = [b.__name__ for b in obj.__mro__[1:-1]]
+            if len(bases)>3: bases = bases[:3]+['…']
+            bases = ','.join(bases)
             base_str = f'({bases})' if bases else ''
             typs.append(f'- class {name}{base_str}{comment}')
         elif callable(obj):
@@ -302,11 +337,17 @@ def _doc_module(mod):
             if _elided(obj, d): comment = f'{comment}…' if comment else ': …  # …'
             sig = (groups and _grouped_sig(obj, name, groups, refs)) or fmt_sig(obj)
             funcs.append(f'- {pre} {name}{sig}{comment}')
+    if not all and not getattr(mod, '__pyskill_sigs__', True):
+        parts.append(f"\n## elided: {len(typs)} types, {len(funcs)} functions. `doc('{mod.__name__}', all=True)` lists them.")
+        typs = funcs = refs = ()
     if typs: parts += ['\n## types:', *typs]
     if funcs: parts += ['\n## functions:', *funcs]
     if refs:
         parts.append('\n## shared params:')
         for g,r in refs.items(): parts += _fmt_group(g, *r)
+    if subs and not all and len(inspect.cleandoc(mod.__doc__ or '').splitlines())>3:
+        parts.append(f"\n## elided: {len(subs)} submodules. `doc('{mod.__name__}', all=True)` lists them.")
+        subs = ()
     if subs: parts += ['\n## submodules:', *subs]
     return PrettyString('\n'.join(parts))
 
