@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.26
+
+### New Features
+
+- Add `all` param to `doc()` for revealing elided symbols; truncate long MRO bases; expand module docstrings ([#47](https://github.com/AnswerDotAI/pyskills/issues/47))
+
+
 ## 0.0.25
 
 - Skill updates
