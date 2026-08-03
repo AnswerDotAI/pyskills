@@ -28,7 +28,7 @@ A module with a very large API surface can set `__pyskill_sigs__ = False` to eli
 
 A *package* with a substantive docstring — more than the default summary line plus docs link — is treated as curated, so `doc()` elides its mechanical submodule listing too: a curated package docstring, like the ones nbdev generates from a project's notebooks, already says which modules matter. `all=True` restores the listing:
 
-A trailing `…` on an overview function line marks elided detail: the function has docments, or a docstring beyond its first line, so `doc(func)` will show more than the overview line did.
+A trailing `…` on an overview function line marks elided detail: the function has docments, or a docstring beyond its first line, so `doc(func)` will show more than the overview line did. A complete overview line instead ends with its bracketed doc key: the line already shows everything `doc(func)` would, so the key can be declared straight from the summary.
 
 Pyskills can be added as standard modules with pyproject entrypoints. But for convenience, they can also be added to a custom pyskills XDG directory, which is automatically added to sys.path.
 
@@ -38,12 +38,14 @@ Docs: https://AnswerDotAI.github.io/pyskills/core.html.md"""
 
 # %% auto #0
 __all__ = ['ep_desc', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosAllowPolicy', 'PathWritePolicy', 'OpenWritePolicy',
-           'SymbolNotFound', 'resolve', 'xdir', 'doc', 'fmt_sig', 'docfind', 'pyskills_dir', 'ensure_pyskills_dir',
-           'clear_mod', 'enable_pyskill', 'register_pyskill', 'disable_pyskill', 'delete_pyskill', '__pytools__']
+           'SymbolNotFound', 'resolve', 'xdir', 'doc_key', 'doc', 'fmt_sig', 'docfind', 'pyskills_dir',
+           'ensure_pyskills_dir', 'clear_mod', 'enable_pyskill', 'register_pyskill', 'disable_pyskill',
+           'delete_pyskill', '__pytools__']
 
 # %% ../nbs/00_core.ipynb #38e384dc
 from fastcore.utils import *
 from fastcore.docments import MarkdownRenderer,can_render,docments
+from fastcore.tools import line_hash
 from fastcore.xdg import *
 from importlib.metadata import entry_points
 from inspect import signature
@@ -245,10 +247,21 @@ def xdir(
     return [o for o in res if re.search(q, o, re.I)] if q else res
 
 # %% ../nbs/00_core.ipynb #15e66852
+def doc_key(sym):
+    "The 4-hex proof-of-sight key shown in `doc(sym)` output (None where docs carry no key): llmdojo's `doced(sym='key')` verifies it against this live rendering"
+    if isinstance(sym, str): sym = resolve(sym)
+    if not getattr(sym, '__name__', ''): return None
+    if isinstance(sym, type): r = _doc_class(sym)
+    elif not hasattr(sym, '_repr_markdown_') and callable(sym) and can_render(sym): r = MarkdownRenderer(sym)
+    else: return None
+    return line_hash(str(r))
+
 def _doc1(sym, all=False):
     if isinstance(sym, str): sym = resolve(sym)
-    if isinstance(sym, type): return _doc_class(sym)
     if isinstance(sym, types.ModuleType): return _doc_module(sym, all)
+    if (k := doc_key(sym)):
+        r = _doc_class(sym) if isinstance(sym, type) else MarkdownRenderer(sym)
+        return PrettyString(f"{r}\n# doced: {sym.__name__}={k!r}")
     if hasattr(sym, '_repr_markdown_'): return PrettyString(sym._repr_markdown_())
     if callable(sym) and can_render(sym): return PrettyString(MarkdownRenderer(sym))
     if (items := _xdir(sym)): return _doc_instance(sym, items)
@@ -335,6 +348,7 @@ def _doc_module(mod, all=False):
         elif callable(obj):
             pre = 'async def' if inspect.iscoroutinefunction(obj) else 'def'
             if _elided(obj, d): comment = f'{comment}…' if comment else ': …  # …'
+            elif (k := doc_key(obj)): comment = f'{comment} [{k}]'
             sig = (groups and _grouped_sig(obj, name, groups, refs)) or fmt_sig(obj)
             funcs.append(f'- {pre} {name}{sig}{comment}')
     if not all and not getattr(mod, '__pyskill_sigs__', True):
