@@ -26,6 +26,8 @@ NB: `doc()` works on *all* python modules, not only pyskills. The only thing tha
 
 `xdir(sym, q=None)` complements `doc()` for discovery: it lists an object's public names, filtered by an optional case-insensitive regex. Use it when a module, class, or dynamic API surface is too big to `doc()` whole, e.g. `xdir(page.emulation, 'viewport')` on a fastcdp CDP domain, then `doc()` the match before calling it.
 
+`info_md(obj, source=False)` (from `ipykernel_helper`, preloaded by clikernel startup where installed) is the third inspection tool: IPython's `?` -- or `??` with `source=True` -- rendered as markdown. Reach for it when you want an object's real signature, docstring, and source together, rather than `inspect.getsource`/`inspect.signature` or bare `?`/`??`.
+
 ## Testing
 
 `SkillTestClass` and `skill_test_func` exist to verify the system works: `doc()` them as a smoke test.
