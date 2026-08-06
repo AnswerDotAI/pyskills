@@ -251,19 +251,25 @@ def doc_key(sym):
     "The 4-hex proof-of-sight key shown in `doc(sym)` output (None where docs carry no key): llmdojo's `doced(sym='key')` verifies it against this live rendering"
     if isinstance(sym, str): sym = resolve(sym)
     if not getattr(sym, '__name__', ''): return None
-    if isinstance(sym, type): r = _doc_class(sym)
-    elif not hasattr(sym, '_repr_markdown_') and callable(sym) and can_render(sym): r = MarkdownRenderer(sym)
-    else: return None
-    return line_hash(str(r))
+    try:
+        if isinstance(sym, type): r = _doc_class(sym)
+        elif not hasattr(sym, '_repr_markdown_') and callable(sym) and can_render(sym): r = MarkdownRenderer(sym)
+        else: return None
+        return line_hash(str(r))
+    except Exception: return None
 
 def _doc1(sym, all=False):
     if isinstance(sym, str): sym = resolve(sym)
     if isinstance(sym, types.ModuleType): return _doc_module(sym, all)
-    if (k := doc_key(sym)):
-        r = _doc_class(sym) if isinstance(sym, type) else MarkdownRenderer(sym)
-        return PrettyString(f"{r}\n# doced: {sym.__name__}={k!r}")
-    if hasattr(sym, '_repr_markdown_'): return PrettyString(sym._repr_markdown_())
-    if callable(sym) and can_render(sym): return PrettyString(MarkdownRenderer(sym))
+    try:
+        if (k := doc_key(sym)):
+            r = _doc_class(sym) if isinstance(sym, type) else MarkdownRenderer(sym)
+            return PrettyString(f"{r}\n# doced: {sym.__name__}={k!r}")
+        if hasattr(sym, '_repr_markdown_'): return PrettyString(sym._repr_markdown_())
+        if callable(sym) and can_render(sym): return PrettyString(MarkdownRenderer(sym))
+    except Exception as e:
+        ds = inspect.cleandoc(getattr(sym, '__doc__', None) or '')
+        return PrettyString(f'{ds}\n(doc render failed: {type(e).__name__}: {e}; stale kernel? try a restart)'.strip())
     if (items := _xdir(sym)): return _doc_instance(sym, items)
     if '__str__' in type(sym).__dict__: return str(sym)
     if '__repr__' in type(sym).__dict__: return repr(sym)
