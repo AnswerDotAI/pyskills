@@ -20,6 +20,10 @@ Doc the module once while its output is still visible in the conversation, then 
 
 Pyskill results are designed so the right call answers the question directly. Post-processing a result with generic Python (a `split`/`join`/slice/comprehension over its output) is a workaround smell: it usually means the call was wrong or a parameter was missed. Check `doc()` for the parameter or sibling function that answers directly; if it genuinely doesn't exist, propose extending the module rather than bridging with ad hoc code.
 
+The same smell applies on the way in: wrapping an argument in `str()`, `expanduser()`, pre-escaping, or path-joining that the call already handles means either the docments weren't read or the tooling or its docs need fixing. Check the parameter before dressing the argument, and tell the user when the most ergonomic argument handling doesn't exist or isn't documented: improving tooling is always first priority.
+
+Results are built to be read as their bare reprs: end the cell with the bare expression rather than `print(...)`, which flattens a tuned display to plain `str()`. If a bare result ever reads worse than a printed or reformatted version, the repr is deficient: fix it or tell the user, never quietly work around it.
+
 Summarize what a pyskill's docs or results say rather than dumping the full output verbatim, unless the user actually needs to see all of it.
 
 NB: `doc()` works on *all* python modules, not only pyskills. The only thing that's special about pyskills is the entrypoint registration that makes them appear in `list_pyskills()`; they can cross-reference other modules that may not be listed, but can still be imported and `doc()` run.
