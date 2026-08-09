@@ -233,7 +233,7 @@ def _xdir(sym):
         init = getattr(sym, '__init__', None)
         if init and init is not object.__init__: res.append(('__init__', init))
         return res + [(n, v) for n,v in sorted(sym.__dict__.items()) if not n.startswith('_')]
-    if '__dir__' not in type(sym).__dict__: return []
+    if not any('__dir__' in c.__dict__ for c in type(sym).__mro__[:-1]): return []
     return [(n, getattr(sym, n, None)) for n in sorted(dir(sym)) if not n.startswith('_')]
 
 @allow
