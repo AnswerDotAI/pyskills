@@ -48,7 +48,6 @@ from fastcore.docments import MarkdownRenderer,can_render,docments
 from fastcore.tools import line_hash
 from fastcore.xdg import *
 from importlib.metadata import entry_points
-from inspect import signature
 import builtins, importlib.util, types, inspect, collections, ast, site, shutil, sys, typing
 from fastaudit.core import track_call
 
@@ -303,7 +302,7 @@ def _fmt_ann(a):
 def _ann(a): return _N(_fmt_ann(a)) if a is not inspect._empty else a
 
 def fmt_sig(f, ps=None):
-    try: s = signature(f)
+    try: s = signature_ex(f)
     except (ValueError, TypeError): return '(...)'
     ps = [p.replace(annotation=_ann(p.annotation)) for p in (s.parameters.values() if ps is None else ps)]
     return str(s.replace(parameters=ps, return_annotation=_ann(s.return_annotation)))
@@ -375,7 +374,7 @@ def _doc_module(mod, all=False):
 # %% ../nbs/00_core.ipynb #155cdb61
 def _grouped_sig(f, name, groups, refs):
     "Signature of `f` with each fully-matched param group collapsed to `**group`, recording each group's first match in `refs`"
-    try: ps = list(signature(f).parameters.values())
+    try: ps = list(signature_ex(f).parameters.values())
     except (ValueError, TypeError): return None
     done = []
     for g,names in groups.items():
@@ -407,7 +406,7 @@ def _doc_instance(sym, items):
         ds = (getattr(obj, '__doc__', None) or '').splitlines()
         comment = f'  # {ds[0].strip()}' if ds and ds[0].strip() else ''
         if callable(obj):
-            try: sig = str(signature(obj))
+            try: sig = str(signature_ex(obj))
             except (ValueError, TypeError): sig = '(...)'
             parts.append(f'- {name}{sig}{comment}')
         else: parts.append(f'- {name}: {type(obj).__name__} = {repr(obj)[:80]}')
