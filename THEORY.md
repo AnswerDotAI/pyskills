@@ -127,7 +127,7 @@ The session codecs route through chat on their way to the wire: ant's `dlg2msgs`
 
 Packages whose primary users are AI agents teach in the module docstring, where `doc()` and pyskills discovery reach it. The README keeps the human jobs: pitch, install, development notes, and a pointer to the skill docs (remold is the model). Usage prose duplicated between the two leaves an unmaintained copy, and unmaintained copies teach wrong names.
 
-A separate `skill.py` earns its place only when a package's import surface and its LLM surface differ, so that a curated teaching module pays for itself: exhash, rgapi, and aidialog each have machinery their skill module selects from, and fastcore's is `editskill`. When the whole package is the LLM surface, register the package module itself as the pyskill (remold, `toolslm.read_md`). Either way, the docstring's first line doubles as the `list_pyskills()` description, so it should name the capability and when to reach for it.
+A separate `skill.py` earns its place only when a package's import surface and its LLM surface differ, so that a curated teaching module pays for itself: exhash, rgapi, and aidialog each have machinery their skill module selects from, and fastcore's is `editskill`. When the whole package is the LLM surface, register the package module itself as the pyskill (remold). Either way, the docstring's first line doubles as the `list_pyskills()` description, so it should name the capability and when to reach for it.
 
 ### Demonstrations over instructions
 
