@@ -8,7 +8,7 @@ Modules:
 
 - `pyskills.core`: Skill discovery, LLM-friendly doc rendering, the allow registry, and pyskill registration
 - `pyskills.createskill`: How to create a pyskills pyskill module.
-- `pyskills.skill`: Pyskills is a plugin system allowing Python packages to register "skills" (units of LLM-usable functionality) via standard Python entry points. An LLM harness (e.g. solveit) discovers available pyskills without importing them, reads lightweight descriptions via AST inspection, and selectively loads chosen pyskills into context using standard imports."""
+- `pyskills.skill`: Pyskills are tool modules that Python packages register so you can find them without importing everything. `list_pyskills()` names the ones installed, with a one-line description each, and needs no imports. Load one with a normal import, then read its docs with `doc()`."""
 
 __version__ = "0.0.28"
 from .core import *
