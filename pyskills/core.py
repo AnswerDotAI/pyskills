@@ -22,7 +22,7 @@ Inspect at increasing detail — works on any Python module, not just pyskills.
 
 `allow` registers the callables a pyskill trusts to perform side-effecting operations under a sandbox (e.g. safepyrun): pass functions, `{cls: ['method']}` dicts (`...` for all public methods), or callable instances, and they land in the `__pytools__` registry; an object defining `__allow__` delegates registration to the items it returns. Outside a sandbox `allow` is a no-op, and inside one, sandboxed code can't broaden its own permissions, since `allow` itself raises an audit event.
 
-`xdir` returns public names for a module, class, or instance. Modules respect `__all__` and include explicitly imported sibling submodules; classes include `__init__` and public methods; instances opt in by defining `__dir__`. Pass `q` to filter the names with a case-insensitive regex.
+`xdir` returns public names for a module, class, or instance. Modules respect `__all__` and include explicitly imported sibling submodules; classes include `__init__` and public methods; instances with a custom `__dir__` list their dynamic surface, and plain instances list their class's API. Pass `q` to filter the names with a case-insensitive regex.
 
 A module with a very large API surface can set `__pyskill_sigs__ = False` to elide the types/functions listing from its `doc()` output: its docstring is then the whole answer, with one line noting the elision. Pass `all=True` to `doc` to list the elided symbols anyway.
 
@@ -220,6 +220,10 @@ def _is_own(sym, n):
     return mname.split('.')[0] == sym.__name__.split('.')[0]
 
 # %% ../nbs/00_core.ipynb #cc49f150
+def _dynamic(sym):
+    "Does `sym`'s type define a custom `__dir__` (a dynamic API surface)?"
+    return any('__dir__' in c.__dict__ for c in type(sym).__mro__[:-1])
+
 def _xdir(sym):
     "Filtered (name, obj) pairs for public symbols of a module or class (or anything with `__dir__`)"
     if isinstance(sym, types.ModuleType):
@@ -233,7 +237,7 @@ def _xdir(sym):
         init = getattr(sym, '__init__', None)
         if init and init is not object.__init__: res.append(('__init__', init))
         return res + [(n, v) for n,v in sorted(sym.__dict__.items()) if not n.startswith('_')]
-    if not any('__dir__' in c.__dict__ for c in type(sym).__mro__[:-1]): return []
+    if not _dynamic(sym): return []
     return [(n, getattr(sym, n, None)) for n in sorted(dir(sym)) if not n.startswith('_')]
 
 @allow
@@ -241,8 +245,9 @@ def xdir(
     sym:str|object, # Module, class, or instance to inspect
     q:str=None # Optional case-insensitive regex over names
 ):
-    "Filtered names for public symbols of a module or class (or anything with `__dir__`)"
+    "Filtered names for public symbols of a module, class, or instance (a plain instance lists its class)"
     if isinstance(sym, str): sym = resolve(sym)
+    if not isinstance(sym, (types.ModuleType, type)) and not _dynamic(sym): sym = type(sym)
     res = [o for o,_ in _xdir(sym)]
     return [o for o in res if re.search(q, o, re.I)] if q else res
 
