@@ -89,6 +89,11 @@ def allow(*c, allow_policy=None): # Callable that raises if call not allowed
     def _wrap(v):
         if allow_policy is None or v is ... or isinstance(v, tuple): return v
         return (v, allow_policy)
+    added = []
+    def _add(k, *vs):
+        new = [v for v in vs if v not in __pytools__[k]]
+        __pytools__[k].update(new)
+        added.extend((k,v) for v in new)
     res = None
     for o in c:
         if hasattr(o, '__allow__'):
@@ -101,18 +106,18 @@ def allow(*c, allow_policy=None): # Callable that raises if call not allowed
                     allow(k, allow_policy=v)
                     continue
                 vals = listify(v)
-                __pytools__[k].update(_wrap(x) for x in vals)
+                _add(k, *map(_wrap, vals))
                 for x in vals:
                     if isinstance(name := x[0] if isinstance(x, tuple) else x, str): _set_wrapped(k, name)
         else:
             res = track_call(o) if callable(o) else o
             if not isinstance(o, type) and callable(o) and not inspect.isroutine(o) and not hasattr(o, '__qualname__'):
-                __pytools__[o].add(_wrap('__call__'))
+                _add(o, _wrap('__call__'))
                 _set_wrapped(type(o), '__call__')
                 continue
             objclass = getattr(o, '__objclass__', None)
             if objclass is not None:
-                __pytools__[objclass].add(_wrap(o.__name__))
+                _add(objclass, _wrap(o.__name__))
                 _set_wrapped(objclass, o.__name__, o)
                 continue
             qualname = getattr(o, '__qualname__', '') or ''
@@ -122,11 +127,12 @@ def allow(*c, allow_policy=None): # Callable that raises if call not allowed
             if '.' in qualname:
                 cls = getattr(mod, qualname.rsplit('.', 1)[0], None)
                 if cls is not None:
-                    __pytools__[cls].add(_wrap(o.__name__))
+                    _add(cls, _wrap(o.__name__))
                     _set_wrapped(cls, o.__name__, o)
                     continue
-            __pytools__[mod].add(_wrap(o.__name__))
+            _add(mod, _wrap(o.__name__))
             _set_wrapped(mod, o.__name__, o)
+    if added: sys.audit('pyskills.allowed', added)
     if len(c)==1 and callable(c[0]): return res
 
 # %% ../nbs/00_core.ipynb #a3124a91
