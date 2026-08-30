@@ -31,18 +31,29 @@ Discover what pyskills are available. This works without importing any pyskill m
 list_pyskills()
 ```
 
-    {'pyskills.edit': 'Functions for creating, viewing, and modifying files. Each editing operation returns unified diffs showing what changed. Where the `exhash` pyskill is available, prefer it for editing: its hash-verified addressing fails loudly on stale context instead of editing nearby text.',
-     'pyskills.ipynb': 'Functions for view/modifying ipynb file notebook cells. Each operation returns unified diffs showing what changed. Where `exhash` is available, prefer its hash-verified editing for cell source changes.',
-     'pyskills.skill': 'Pyskills is a plugin system allowing Python packages to register "skills" (units of LLM-usable functionality) via standard Python entry points. An LLM host (e.g. solveit) discovers available pyskills without importing them, reads lightweight descriptions via AST inspection, and selectively loads chosen pyskills into context using standard imports.',
+    {'pyskills.skill': 'Pyskills is a plugin system allowing Python packages to register "skills" (units of LLM-usable functionality) via standard Python entry points. An LLM harness (e.g. solveit) discovers available pyskills without importing them, reads lightweight descriptions via AST inspection, and selectively loads chosen pyskills into context using standard imports.',
+     'llmsurgery.skill': 'Read and work with Claude Code and Codex session transcripts.',
+     'exhash.skill': 'Universal hash-verified text editing for local files. Use this when an LLM needs one safe editing interface for reading, previewing, and modifying text files.',
+     'toolslm.read_md': 'Read long Markdown documents by section number: search sections, follow links, and retrieve text by short dotted addresses, so nothing is displayed but what the task needs.',
+     'fastcore.editskill': 'Text, file, cell, and notebook editing from `fastcore.tools` and `fastcore.nbio`, plus the conventions the whole fastai editing toolkit follows. Read this before working with the editing tools in any package that shares them.',
+     'clikernel.skill': 'Use the persistent `clikernel` MCP session as the default workspace for any task advanced through live Python execution -- stateful inspection, file-editing workflows, debugging, experiments, API probes, data transforms, or notebook-style work. Read this before writing, running, or debugging Python code in a session with `clikernel` connected.',
+     'nbdev.skill': 'Author clear, executable nbdev notebooks where code, prose, examples, outputs, and tests form one coherent narrative.',
      'tracefunc.skill': "Trace a Python function's execution at AST-line level: per-line hit counts and live variable values, via `sys.monitoring`. Use when debugging *why* code takes a branch, loops, recurses, or computes a wrong value, without editing the code under investigation or using an interactive debugger.",
+     'aidialog.dlgskill': 'Read, search, and edit dialogs and notebooks through the aidialog `Dialog`/`Message` model',
+     'remold': "Structural search and rewrite for Python source: declarative ast-grep pattern rules, LibCST matcher transforms for everything patterns can't express, and tree-based symbol queries. Use this to edit code by structure (rename calls, move methods, rewrite APIs) where regexes break and `ast` loses comments.",
+     'cordslite.skill': 'Load this skill when an agent needs to search, summarize, or find information in Discord using cordslite. It covers read-only workflows for connecting to Discord, opening a guild, orienting through channels, searching messages, reading threads, and fetching attachments.',
+     'fastmux.skill': 'Live handles for tmux sessions, windows, and panes, plus named background sessions driven by sid. Use this when code needs to read terminal screens or scrollback, drive interactive processes, build pane layouts, search text across terminals, or keep a persistent terminal session that both an agent and the user can inspect and drive.',
+     'fastcdp.skill': 'Drive Chrome via the DevTools Protocol: navigate, click and fill pages, read them as an LLM-friendly accessibility tree, buffer console/network/dialog activity for debugging, and call any raw CDP command.',
+     'rgapi.skill': 'Fast and flexible file discovery and search for Python. Use this when code needs `fd`-style file finding or `rg`-style searching.',
+     'aai_coding.coding_patterns': "Jeremy's coding style and conventions: read before writing, reviewing, or assessing any code.",
+     'aai_coding.harness_docs': 'Official docs for the current LLM harness (Claude Code or codex): read before answering questions about harness behavior, config, or features.',
+     'aai_coding.looker': 'Answer questions about images and PDFs via an isolated codex checker, without loading them into your own context (macOS-only). Use it to verify rendered output: PDFs, screenshots, captured windows.',
+     'aai_coding.write_prose': "How to write prose that doesn't read as AI slop: read before writing anything for human readers.",
+     'ghapi.skill': 'GitHub REST API access via `GhApi`, plus local git operations via `fastgit.Git`. Use this for day-to-day GitHub work: reading/creating issues and PRs, checking CI status, managing releases/branches/gists, and repo-local git operations -- all from Python, no shelling out to `gh`/`git` needed.',
+     'fastanki.skill': 'Anki flashcard tools for LLM-driven spaced repetition. Direct sqlite + AnkiWeb sync, no Anki app needed.',
      'dialoghelper.solveitskill': 'Read, search, edit, and manage Solveit dialogs using dialoghelper.core, including dialog/message addressing, line-numbered inspection, targeted message edits, add/update/delete/copy/paste workflows, and safe editing patterns.',
      'dialoghelper.termskill': 'Read and edit Solveit dialog (or Jupyter) .ipynb files from a CLI / script. Solveit is an online notebook application (like Jupyter with AI integration) where each notebook is called a "dialog" and is stored as an `.ipynb` file containing `code`, `note` (markdown), and `prompt` (markdown with a special delimiter) messages (aka "cells"). The `dialoghelper` package provides tools for reading, searching, adding, updating, and deleting those messages.',
-     'ghapi.skill': 'GitHub REST API access via `GhApi`, plus local git operations via `fastgit.Git`. Use this for day-to-day GitHub work: reading/creating issues and PRs, checking CI status, managing releases/branches/gists, and repo-local git operations -- all from Python, no shelling out to `gh`/`git` needed.',
-     'rgapi.skill': 'Fast and flexible file discovery and search for Python. Use this when code needs `fd`-style file finding or `rg`-style searching.',
-     'exhash.skill': 'Universal hash-verified text editing for local files. Use this when an LLM needs one safe editing interface for reading, previewing, and modifying text files.',
-     'cordslite.skill': 'Load this skill when an agent needs to search, summarize, or find information in Discord using cordslite. It covers read-only workflows for connecting to Discord, opening a guild, orienting through channels, searching messages, reading threads, and fetching attachments.',
-     'bgtmux.skill': 'Use tmux-backed background terminal sessions from Solveit. Useful to have a persistent terminal session that both you and the user can inspect and edit, and that you can send input to from Solveit.',
-     'clikernel.skill': 'Use the persistent `clikernel` MCP session as the default workspace for any task advanced through live Python execution -- stateful inspection, file-editing workflows, debugging, experiments, API probes, data transforms, or notebook-style work. Read this before writing, running, or debugging Python code in a session with `clikernel` connected.'}
+     'test.skill': 'A test skill.'}
 
 ### The [`doc`](https://AnswerDotAI.github.io/pyskills/core.html#doc) and [`xdir`](https://AnswerDotAI.github.io/pyskills/core.html#xdir) functions
 
@@ -60,8 +71,7 @@ For a **module**, [`doc`](https://AnswerDotAI.github.io/pyskills/core.html#doc) 
 print(doc(pyskills.skill)[-500:])
 ```
 
-    ills.skill.SkillTestClass)
-        doc(pyskills.skill.skill_test_func)
+    test_func` exist to verify the system works: `doc()` them as a smoke test.
 
     ## Creating pyskills
 
@@ -69,14 +79,13 @@ print(doc(pyskills.skill)[-500:])
     """
 
     ## types:
-    - class SkillTestClass(str): …  # Some class.
+    - class SkillTestClass(str): ...  # Some class.
 
     ## functions:
-    - async def async_skill_test_func(x: int = 0) -> str: …  # A test function…
-    - def skill_test_func(x: int = 0) -> str: …  # A test function…
+    - async def async_skill_test_func(x: int = 0) -> str: ...  # A test function…
+    - def skill_test_func(x: int = 0) -> str: ...  # A test function…
 
-    ## submodules:
-      pyskills.createskill: …  # How to create a pyskills pyskill module.
+    ## elided: 1 submodules. `doc('pyskills.skill', all=True)` lists them.
 
 For a **function**, [`doc`](https://AnswerDotAI.github.io/pyskills/core.html#doc) renders the full signature with parameter comments (docments):
 
@@ -101,6 +110,18 @@ doc(pyskills.skill.SkillTestClass)
         def f(self, x: int = 0) -> str: ...  # A test method
         @property
         def g(self) -> str: ...  # A test prop
+
+### Command line
+
+`pyskills-doc` renders the same LLM-friendly documentation in a fresh process, importing the dotted symbol before displaying it:
+
+``` bash
+pyskills-doc fastcore.script
+pyskills-doc fastcore.script.call_parse
+pyskills-doc --all aidialog.dlgskill
+```
+
+Run `pyskills-doc --help` for the complete command syntax.
 
 ### The [`allow`](https://AnswerDotAI.github.io/pyskills/core.html#allow) system
 
