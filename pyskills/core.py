@@ -38,7 +38,7 @@ Docs: https://AnswerDotAI.github.io/pyskills/core.html.md"""
 
 # %% auto #0
 __all__ = ['ep_desc', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosAllowPolicy', 'PathWritePolicy', 'OpenWritePolicy',
-           'SymbolNotFound', 'resolve', 'xdir', 'doc_key', 'doc', 'fmt_sig', 'docfind', 'pyskills_dir',
+           'SymbolNotFound', 'resolve', 'xdir', 'doc_owner', 'doc_key', 'doc', 'fmt_sig', 'docfind', 'pyskills_dir',
            'ensure_pyskills_dir', 'clear_mod', 'enable_pyskill', 'register_pyskill', 'disable_pyskill',
            'delete_pyskill', '__pytools__']
 
@@ -251,10 +251,19 @@ def xdir(
     res = [o for o,_ in _xdir(sym)]
     return [o for o in res if re.search(q, o, re.I)] if q else res
 
+# %% ../nbs/00_core.ipynb #67d489f0
+def doc_owner(sym):
+    "The object whose `doc` covers `sym`: its class for a plain callable instance, else `sym` itself"
+    if isinstance(sym, str): sym = resolve(sym)
+    if getattr(sym, '__name__', '') or _dynamic(sym) or hasattr(sym, '_repr_markdown_'): return sym
+    if callable(sym) and can_render(sym): return type(sym)
+    return sym
+
 # %% ../nbs/00_core.ipynb #15e66852
 def doc_key(sym):
     "The 4-hex proof-of-sight key shown in `doc(sym)` output (None where docs carry no key): llmdojo's `doced(sym='key')` verifies it against this live rendering"
     if isinstance(sym, str): sym = resolve(sym)
+    if (o := doc_owner(sym)) is not sym: return doc_key(o)
     if not getattr(sym, '__name__', ''): return None
     try:
         if isinstance(sym, type): r = _doc_class(sym)
@@ -269,7 +278,8 @@ def _doc1(sym, all=False):
     try:
         if (k := doc_key(sym)):
             r = _doc_class(sym) if isinstance(sym, type) else MarkdownRenderer(sym)
-            return PrettyString(f"{r}\n# doced: {sym.__name__}={k!r}")
+            nm = getattr(sym, '__name__', None) or type(sym).__name__
+            return PrettyString(f"{r}\n# doced: {nm}={k!r}")
         if hasattr(sym, '_repr_markdown_'): return PrettyString(sym._repr_markdown_())
         if callable(sym) and can_render(sym): return PrettyString(MarkdownRenderer(sym))
     except Exception as e:
