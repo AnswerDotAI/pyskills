@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.29
+
+### New Features
+
+- Remove doc keys: `doc_owner`, `doc_key`, and the `# doced:` lines ([#56](https://github.com/AnswerDotAI/pyskills/pull/56)), thanks to [@jph00](https://github.com/jph00)
+
+
 ## 0.0.28
 
 ### New Features
