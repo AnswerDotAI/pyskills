@@ -38,14 +38,12 @@ Docs: https://AnswerDotAI.github.io/pyskills/core.html.md"""
 
 # %% auto #0
 __all__ = ['ep_desc', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosAllowPolicy', 'PathWritePolicy', 'OpenWritePolicy',
-           'SymbolNotFound', 'resolve', 'xdir', 'doc_owner', 'doc_key', 'doc', 'fmt_sig', 'docfind', 'pyskills_dir',
-           'ensure_pyskills_dir', 'clear_mod', 'enable_pyskill', 'register_pyskill', 'disable_pyskill',
-           'delete_pyskill', '__pytools__']
+           'SymbolNotFound', 'resolve', 'xdir', 'doc', 'fmt_sig', 'docfind', 'pyskills_dir', 'ensure_pyskills_dir',
+           'clear_mod', 'enable_pyskill', 'register_pyskill', 'disable_pyskill', 'delete_pyskill', '__pytools__']
 
 # %% ../nbs/00_core.ipynb #38e384dc
 from fastcore.utils import *
 from fastcore.docments import MarkdownRenderer,can_render,docments
-from fastcore.tools import line_hash
 from fastcore.xdg import *
 from importlib.metadata import entry_points
 import builtins, importlib.util, types, inspect, collections, ast, site, shutil, sys, typing
@@ -219,7 +217,7 @@ def _is_own(sym, n):
     if sym.__name__.startswith(mname + '.'): return False
     return mname.split('.')[0] == sym.__name__.split('.')[0]
 
-# %% ../nbs/00_core.ipynb #cc49f150
+# %% ../nbs/00_core.ipynb #a1ba52e3
 def _dynamic(sym):
     "Does `sym`'s type define a custom `__dir__` (a dynamic API surface)?"
     return any('__dir__' in c.__dict__ for c in type(sym).__mro__[:-1])
@@ -251,35 +249,12 @@ def xdir(
     res = [o for o,_ in _xdir(sym)]
     return [o for o in res if re.search(q, o, re.I)] if q else res
 
-# %% ../nbs/00_core.ipynb #67d489f0
-def doc_owner(sym):
-    "The object whose `doc` covers `sym`: its class for a plain callable instance, else `sym` itself"
-    if isinstance(sym, str): sym = resolve(sym)
-    if getattr(sym, '__name__', '') or _dynamic(sym) or hasattr(sym, '_repr_markdown_'): return sym
-    if callable(sym) and can_render(sym): return type(sym)
-    return sym
-
 # %% ../nbs/00_core.ipynb #15e66852
-def doc_key(sym):
-    "The 4-hex proof-of-sight key shown in `doc(sym)` output (None where docs carry no key): llmdojo's `doced(sym='key')` verifies it against this live rendering"
-    if isinstance(sym, str): sym = resolve(sym)
-    if (o := doc_owner(sym)) is not sym: return doc_key(o)
-    if not getattr(sym, '__name__', ''): return None
-    try:
-        if isinstance(sym, type): r = _doc_class(sym)
-        elif not hasattr(sym, '_repr_markdown_') and callable(sym) and can_render(sym): r = MarkdownRenderer(sym)
-        else: return None
-        return line_hash(str(r))
-    except Exception: return None
-
 def _doc1(sym, all=False):
     if isinstance(sym, str): sym = resolve(sym)
     if isinstance(sym, types.ModuleType): return _doc_module(sym, all)
     try:
-        if (k := doc_key(sym)):
-            r = _doc_class(sym) if isinstance(sym, type) else MarkdownRenderer(sym)
-            nm = getattr(sym, '__name__', None) or type(sym).__name__
-            return PrettyString(f"{r}\n# doced: {nm}={k!r}")
+        if isinstance(sym, type) and getattr(sym, '__name__', ''): return PrettyString(_doc_class(sym))
         if hasattr(sym, '_repr_markdown_'): return PrettyString(sym._repr_markdown_())
         if callable(sym) and can_render(sym): return PrettyString(MarkdownRenderer(sym))
     except Exception as e:
@@ -369,7 +344,6 @@ def _doc_module(mod, all=False):
         elif callable(obj):
             pre = 'async def' if inspect.iscoroutinefunction(obj) else 'def'
             if _elided(obj, d): comment = f'{comment}…' if comment else ': …  # …'
-            elif (k := doc_key(obj)): comment = f'{comment} [{k}]'
             sig = (groups and _grouped_sig(obj, name, groups, refs)) or fmt_sig(obj)
             funcs.append(f'- {pre} {name}{sig}{comment}')
     if not all and not getattr(mod, '__pyskill_sigs__', True):
