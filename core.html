@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="description" content="Skill discovery, LLM-friendly doc rendering, the allow registry, and pyskill registration">
+
+<title>pyskills API – pyskills</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-d63a2c9c8df14b07662b36303925c8cc.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="pyskills API – pyskills">
+<meta property="og:description" content="Skill discovery, LLM-friendly doc rendering, the allow registry, and pyskill registration">
+<meta property="og:site_name" content="pyskills">
+<meta name="twitter:title" content="pyskills API – pyskills">
+<meta name="twitter:description" content="Skill discovery, LLM-friendly doc rendering, the allow registry, and pyskill registration">
+<meta name="twitter:card" content="summary">
+</head>
+
+<body class="nav-sidebar floating nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">pyskills</span>
+    </a>
+  </div>
+        <div class="quarto-navbar-tools tools-end">
+</div>
+          <div id="quarto-search" class="" title="Search"></div>
+      </div> <!-- /container-fluid -->
+    </nav>
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./core.html">pyskills API</a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">pyskills</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./core.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">pyskills API</span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#overview" id="toc-overview" class="nav-link active" data-scroll-target="#overview">Overview</a>
+  <ul class="collapse">
+  <li><a href="#entry-point-convention" id="toc-entry-point-convention" class="nav-link" data-scroll-target="#entry-point-convention">Entry Point Convention</a></li>
+  <li><a href="#skill-module-contract" id="toc-skill-module-contract" class="nav-link" data-scroll-target="#skill-module-contract">Skill Module Contract</a></li>
+  <li><a href="#discovery-api" id="toc-discovery-api" class="nav-link" data-scroll-target="#discovery-api">Discovery API</a></li>
+  <li><a href="#host-integration" id="toc-host-integration" class="nav-link" data-scroll-target="#host-integration">Host Integration</a></li>
+  </ul></li>
+  <li><a href="#listing-pyskills" id="toc-listing-pyskills" class="nav-link" data-scroll-target="#listing-pyskills">Listing pyskills</a></li>
+  <li><a href="#allow" id="toc-allow" class="nav-link" data-scroll-target="#allow"><code>allow</code></a>
+  <ul class="collapse">
+  <li><a href="#allow-policies" id="toc-allow-policies" class="nav-link" data-scroll-target="#allow-policies">Allow policies</a></li>
+  </ul></li>
+  <li><a href="#doc-xdir" id="toc-doc-xdir" class="nav-link" data-scroll-target="#doc-xdir">doc / xdir</a>
+  <ul class="collapse">
+  <li><a href="#shared-param-groups" id="toc-shared-param-groups" class="nav-link" data-scroll-target="#shared-param-groups">Shared param groups</a></li>
+  </ul></li>
+  <li><a href="#skills-registration" id="toc-skills-registration" class="nav-link" data-scroll-target="#skills-registration">Skills registration</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/AnswerDotAI/pyskills/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div><div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="core.html.md"><i class="bi bi-file-code"></i>Markdown</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">pyskills API</h1>
+</div>
+
+<div>
+  <div class="description">
+    Skill discovery, LLM-friendly doc rendering, the allow registry, and pyskill registration
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- WARNING: THIS FILE WAS AUTOGENERATED! DO NOT EDIT! -->
+<div id="32fdd031" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.773982+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.774845+00:00&quot;,&quot;total&quot;:0.0008649460000000886}}" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastcore.test <span class="im">import</span> test,test_eq,test_is,expect_fail</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
+<p>A plugin system allowing Python packages to register “skills” — units of LLM-usable functionality — via standard Python entry points. An LLM harness (e.g.&nbsp;solveit) discovers available pyskills without importing them, reads lightweight descriptions via AST inspection, and selectively loads chosen pyskills into context.</p>
+<section id="entry-point-convention" class="level3">
+<h3 class="anchored" data-anchor-id="entry-point-convention">Entry Point Convention</h3>
+<p>Packages register pyskills under the group <code>pyskills</code>:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode toml code-with-copy"><code class="sourceCode toml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[project.entry-points.pyskills]</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="dt">my_skill</span> <span class="op">=</span> <span class="st">"mypackage.skill"</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The value is a module path (no <code>:attribute</code> needed). The module’s docstring first paragraph serves as the pyskill description.</p>
+</section>
+<section id="skill-module-contract" class="level3">
+<h3 class="anchored" data-anchor-id="skill-module-contract">Skill Module Contract</h3>
+<p>A pyskill module MUST have:</p>
+<ul>
+<li><strong>Docstring</strong> — first paragraph is the short description shown to the LLM for pyskill selection; remaining will be read by the LLM to get full details on the pyskill.</li>
+</ul>
+<p>A pyskill module MAY have:</p>
+<ul>
+<li><strong><code>__all__</code></strong> — the available symbols imported.</li>
+</ul>
+</section>
+<section id="discovery-api" class="level3">
+<h3 class="anchored" data-anchor-id="discovery-api">Discovery API</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> list_pyskills() <span class="op">-&gt;</span> <span class="bu">dict</span>[<span class="bu">str</span>, <span class="bu">str</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Returns <code>{name: description}</code> for all registered pyskills, using <code>find_spec</code> + AST parsing — no imports.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> mypackage.skill</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Standard python native import</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>doc(mypackage.skill)       <span class="co"># module overview: classes, functions, submodules</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>doc(SomeClass)             <span class="co"># class detail: bases, __init__, methods, properties</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>doc(some_func)             <span class="co"># function detail: full signature with docments</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>xdir(mypackage.skill)      <span class="co"># filtered names for public symbols</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Inspect at increasing detail — works on any Python module, not just pyskills.</p>
+</section>
+<section id="host-integration" class="level3">
+<h3 class="anchored" data-anchor-id="host-integration">Host Integration</h3>
+<p>The harness (e.g.&nbsp;solveit, claude code, codex, …) would:</p>
+<ol type="1">
+<li>Call <a href="https://AnswerDotAI.github.io/pyskills/core.html#list_pyskills"><code>list_pyskills()</code></a> at startup to build a pyskill catalogue</li>
+<li>Include the list with each prompt</li>
+<li>Call <code>import {module}</code> followed by <code>doc({module})</code> for chosen pyskills</li>
+</ol>
+</section>
+</section>
+<section id="listing-pyskills" class="level2">
+<h2 class="anchored" data-anchor-id="listing-pyskills">Listing pyskills</h2>
+<div id="3214f55e" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>ep <span class="op">=</span> entry_points()</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>es <span class="op">=</span> first(ep.select(group<span class="op">=</span><span class="st">'pyskills'</span>, name<span class="op">=</span><span class="st">'pyskills.skill'</span>))</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>es</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>EntryPoint(name='pyskills.skill', value='pyskills.skill', group='pyskills')</code></pre>
+</div>
+</div>
+<div id="a5103e09" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.776372+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.854344+00:00&quot;,&quot;total&quot;:0.07797657999999785}}" data-execution_count="4">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L53" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="ep_desc" class="level3">
+<h3 class="anchored" data-anchor-id="ep_desc">ep_desc</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> ep_desc(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    ep</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>First paragraph of docstring for entry point <code>ep</code>, without importing it</em></p>
+</section>
+</div>
+<div id="04639f50" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(ep_desc(es))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Pyskills is a plugin system allowing Python packages to register "skills" (units of LLM-usable functionality) via standard Python entry points. An LLM harness (e.g. solveit) discovers available pyskills without importing them, reads lightweight descriptions via AST inspection, and selectively loads chosen pyskills into context using standard imports.</code></pre>
+</div>
+</div>
+<div id="de440a8d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.855635+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.858463+00:00&quot;,&quot;total&quot;:0.002830198999994593}}" data-execution_count="6">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L65" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="list_pyskills" class="level3">
+<h3 class="anchored" data-anchor-id="list_pyskills">list_pyskills</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> list_pyskills():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Returns {module: description} for all pyskills. To load a module, use <code>import {module}</code> then view `doc({module}).</em> <strong>NB</strong>: pyskills are <em>THE</em> critical way to extend functionality. <em>ALWAYS</em> check for pyskills to help with tasks. If unsure whether a particular pyskill might help, load it and grabs its docs to see!</p>
+</section>
+</div>
+<div id="fd4bd385" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>list_pyskills()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>{'pyskills.skill': 'Pyskills is a plugin system allowing Python packages to register "skills" (units of LLM-usable functionality) via standard Python entry points. An LLM harness (e.g. solveit) discovers available pyskills without importing them, reads lightweight descriptions via AST inspection, and selectively loads chosen pyskills into context using standard imports.',
+ 'ghapi.skill': 'GitHub REST API access via `GhApi`, plus local git operations via `fastgit.Git`. Use this for day-to-day GitHub work: reading/creating issues and PRs, checking CI status, managing releases/branches/gists, and repo-local git operations -- all from Python, no shelling out to `gh`/`git` needed.',
+ 'dialoghelper.solveitskill': 'Read, search, edit, and manage Solveit dialogs using dialoghelper.core, including dialog/message addressing, line-numbered inspection, targeted message edits, add/update/delete/copy/paste workflows, and safe editing patterns.',
+ 'dialoghelper.termskill': 'Read and edit Solveit dialog (or Jupyter) .ipynb files from a CLI / script. Solveit is an online notebook application (like Jupyter with AI integration) where each notebook is called a "dialog" and is stored as an `.ipynb` file containing `code`, `note` (markdown), and `prompt` (markdown with a special delimiter) messages (aka "cells"). The `dialoghelper` package provides tools for reading, searching, adding, updating, and deleting those messages.',
+ 'fastanki.skill': 'Anki flashcard tools for LLM-driven spaced repetition. Direct sqlite + AnkiWeb sync, no Anki app needed.',
+ 'clikernel.skill': 'Use the persistent `clikernel` MCP session as the default workspace for any task advanced through live Python execution -- stateful inspection, file-editing workflows, debugging, experiments, API probes, data transforms, or notebook-style work. Read this before writing, running, or debugging Python code in a session with `clikernel` connected.',
+ 'llmsurgery.skill': 'Read and work with Claude Code and Codex session transcripts.',
+ 'tracefunc.skill': "Trace a Python function's execution at AST-line level: per-line hit counts and live variable values, via `sys.monitoring`. Use when debugging *why* code takes a branch, loops, recurses, or computes a wrong value, without editing the code under investigation or using an interactive debugger.",
+ 'remold': "Structural search and rewrite for Python source: declarative ast-grep pattern rules, LibCST matcher transforms for everything patterns can't express, and tree-based symbol queries. Use this to edit code by structure (rename calls, move methods, rewrite APIs) where regexes break and `ast` loses comments.",
+ 'exhash.skill': 'Universal hash-verified text editing for local files. Use this when an LLM needs one safe editing interface for reading, previewing, and modifying text files.',
+ 'jph': "Jeremy's tools, which for now is just his notes system. Use if Jeremy says 'create a note', or 'check my notes' or similar.",
+ 'cordslite.skill': 'Load this skill when an agent needs to search, summarize, or find information in Discord using cordslite. It covers read-only workflows for connecting to Discord, opening a guild, orienting through channels, searching messages, reading threads, and fetching attachments.',
+ 'nbdev.skill': 'Author clear, executable nbdev notebooks where code, prose, examples, outputs, and tests form one coherent narrative.',
+ 'fastmux.skill': 'Live handles for tmux sessions, windows, and panes, plus named background sessions driven by sid. Use this when code needs to read terminal screens or scrollback, drive interactive processes, build pane layouts, search text across terminals, or keep a persistent terminal session that both an agent and the user can inspect and drive.',
+ 'rgapi.skill': 'Fast and flexible file discovery and search for Python. Use this when code needs `fd`-style file finding or `rg`-style searching.',
+ 'toolslm.read_md': 'Read long Markdown documents by section number: search sections, follow links, and retrieve text by short dotted addresses, so nothing is displayed but what the task needs.',
+ 'fastcdp.skill': 'Drive Chrome via the DevTools Protocol: navigate, click and fill pages, read them as an LLM-friendly accessibility tree, buffer console/network/dialog activity for debugging, and call any raw CDP command.',
+ 'aai_coding.coding_patterns': "Jeremy's coding style and conventions: read before writing, reviewing, or assessing any code.",
+ 'aai_coding.harness_docs': 'Official docs for the current LLM harness (Claude Code or codex): read before answering questions about harness behavior, config, or features.',
+ 'aai_coding.looker': 'Answer questions about images and PDFs via an isolated codex checker, without loading them into your own context (macOS-only). Use it to verify rendered output: PDFs, screenshots, captured windows.',
+ 'aai_coding.write_prose': "How to write prose that doesn't read as AI slop: read before writing anything for human readers.",
+ 'fastcore.editskill': 'Text, file, cell, and notebook editing from `fastcore.tools` and `fastcore.nbio`, plus the conventions the whole fastai editing toolkit follows. Read this before working with the editing tools in any package that shares them.',
+ 'aidialog.dlgskill': 'Read, search, and edit dialogs and notebooks through the aidialog `Dialog`/`Message` model',
+ 'test.skill': 'A test skill.'}</code></pre>
+</div>
+</div>
+</section>
+<section id="allow" class="level2">
+<h2 class="anchored" data-anchor-id="allow"><a href="https://AnswerDotAI.github.io/pyskills/core.html#allow"><code>allow</code></a></h2>
+<p><a href="https://AnswerDotAI.github.io/pyskills/core.html#allow"><code>allow</code></a> registers the callables a pyskill trusts to perform side-effecting operations under a sandbox (e.g.&nbsp;safepyrun): pass functions, <code>{cls: ['method']}</code> dicts (<code>...</code> for all public methods), or callable instances, and they land in the <code>__pytools__</code> registry; an object defining <code>__allow__</code> delegates registration to the items it returns. Outside a sandbox <a href="https://AnswerDotAI.github.io/pyskills/core.html#allow"><code>allow</code></a> is a no-op, and inside one, sandboxed code can’t broaden its own permissions, since <a href="https://AnswerDotAI.github.io/pyskills/core.html#allow"><code>allow</code></a> itself raises an audit event.</p>
+<div id="4242ab9d" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.863578+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.868336+00:00&quot;,&quot;total&quot;:0.004760926999999526}}" data-execution_count="10">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L84" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="allow-1" class="level3">
+<h3 class="anchored" data-anchor-id="allow-1">allow</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> allow(</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>c, allow_policy:NoneType<span class="op">=</span><span class="va">None</span>, <span class="co"># Callable that raises if call not allowed</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Add all items in <code>c</code> to <code>__pytools__</code>, optionally constrained by <code>allow_policy</code></em></p>
+</section>
+</div>
+<p><code>__pytools__</code> is a <code>defaultdict(set)</code> mapping classes, modules, or instances to their allowed method/function names (or <code>...</code> for all public methods). Values can be plain strings or <code>(name, AllowPolicy)</code> tuples for allow-checked methods. <a href="https://AnswerDotAI.github.io/pyskills/core.html#allow"><code>allow</code></a> registers entries — plain functions are added under their module, methods under their class, callable instances under the instance itself (as <code>'__call__'</code>), and dicts go directly into <code>__pytools__</code>. If an object defines <code>__allow__</code>, that’s called instead and its result registered.</p>
+<div id="196dfb11" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _test_fn(): <span class="cf">pass</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>_test_fn.__module__ <span class="op">=</span> <span class="st">'__main__'</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>_test_fn.<span class="va">__name__</span> <span class="op">=</span> <span class="st">'my_test_func'</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>allow(_test_fn)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'my_test_func'</span> <span class="kw">in</span> __pytools__[sys.modules[<span class="st">'__main__'</span>]]</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>allow({<span class="bu">str</span>: [<span class="st">'zfill'</span>]})</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'zfill'</span> <span class="kw">in</span> __pytools__[<span class="bu">str</span>]</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>allow({<span class="bu">list</span>: ...})</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> ... <span class="kw">in</span> __pytools__[<span class="bu">list</span>]</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>__pytools__[sys.modules[<span class="st">'__main__'</span>]].discard(<span class="st">'my_test_func'</span>)</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>allow(collections.Counter.most_common)</span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'most_common'</span> <span class="kw">in</span> __pytools__[collections.Counter]</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>__pytools__[collections.Counter].discard(<span class="st">'most_common'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="eb1f53ce" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.868766+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.886347+00:00&quot;,&quot;total&quot;:0.017583888000004322}}" data-execution_count="11">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> httpx</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="b8f223e3" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> chk_url(url, <span class="op">*</span>args, <span class="op">**</span>kwargs):</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> url.startswith(<span class="st">'https://'</span>): <span class="cf">raise</span> <span class="pp">PermissionError</span>()</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>allow({httpx.get: chk_url, httpx.post: chk_url})</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> (<span class="st">'get'</span>, chk_url) <span class="kw">in</span> __pytools__[httpx._api]</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> (<span class="st">'post'</span>, chk_url) <span class="kw">in</span> __pytools__[httpx._api]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="e2230921" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.886660+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.887273+00:00&quot;,&quot;total&quot;:0.0006154000000009319}}" data-execution_count="12">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> fastcore.xtras <span class="im">import</span> timed_cache</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="c91d8145" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="at">@timed_cache</span>(<span class="dv">60</span>)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> wrapped_tool(): <span class="cf">return</span> <span class="st">"ok"</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>allow(wrapped_tool)</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'wrapped_tool'</span> <span class="kw">in</span> __pytools__[sys.modules[<span class="st">'__main__'</span>]]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Callable <em>instances</em> — like the dynamically-generated ops of a spec-driven client — have no useful qualname, so they’re registered under the instance itself with <code>'__call__'</code> (and the class’s <code>__call__</code> is wrapped for call-tracking). An object can also define <code>__allow__</code>, returning a list of items to register in its place; <a href="https://AnswerDotAI.github.io/pyskills/core.html#allow"><code>allow</code></a> recurses into it, so a container can register all its callables at once.</p>
+<div id="8dc14738" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> _CallableTool:</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">async</span> <span class="kw">def</span> <span class="fu">__call__</span>(<span class="va">self</span>, x): <span class="cf">return</span> x</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>tool <span class="op">=</span> _CallableTool()</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>allow(tool)</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'__call__'</span> <span class="kw">in</span> __pytools__[tool]</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="bu">getattr</span>(_CallableTool.<span class="fu">__call__</span>, <span class="st">'_fastaudit_orig'</span>, <span class="va">None</span>) <span class="kw">is</span> <span class="kw">not</span> <span class="va">None</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> _ToolGroup:</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, <span class="op">*</span>ops): <span class="va">self</span>.ops <span class="op">=</span> <span class="bu">list</span>(ops)</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> __allow__(<span class="va">self</span>): <span class="cf">return</span> <span class="va">self</span>.ops</span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>tool2 <span class="op">=</span> _CallableTool()</span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>allow(_ToolGroup(tool2))</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'__call__'</span> <span class="kw">in</span> __pytools__[tool2]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><a href="https://AnswerDotAI.github.io/pyskills/core.html#allow"><code>allow</code></a> raises a <code>pyskills.allow</code> audit event before registering anything. Outside a sandbox that’s a no-op; inside safepyrun’s audit context it means sandboxed code can’t broaden its own permissions by calling <a href="https://AnswerDotAI.github.io/pyskills/core.html#allow"><code>allow</code></a>, since the event is denied like any other unapproved operation:</p>
+<div id="f106a8f7" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>seen <span class="op">=</span> []</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>sys.addaudithook(<span class="kw">lambda</span> ev,args: seen.append(args) <span class="cf">if</span> ev<span class="op">==</span><span class="st">'pyskills.allow'</span> <span class="cf">else</span> <span class="va">None</span>)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>allow(_test_fn)</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>test_eq(seen[<span class="op">-</span><span class="dv">1</span>], ((_test_fn,),))</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>__pytools__[sys.modules[<span class="st">'__main__'</span>]].discard(<span class="st">'my_test_func'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="allow-policies" class="level3">
+<h3 class="anchored" data-anchor-id="allow-policies">Allow policies</h3>
+<div id="77466d76" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.889007+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.891871+00:00&quot;,&quot;total&quot;:0.002866536999995617}}" data-execution_count="14">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L131" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="chk_dest" class="level3">
+<h3 class="anchored" data-anchor-id="chk_dest">chk_dest</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> chk_dest(</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    p, ok_dests</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<p><a href="https://AnswerDotAI.github.io/pyskills/core.html#chk_dest"><code>chk_dest</code></a> resolves a path and verifies it falls under one of the allowed destination prefixes. Raises <code>PermissionError</code> if not. Used by all <a href="https://AnswerDotAI.github.io/pyskills/core.html#allowpolicy"><code>AllowPolicy</code></a> subclasses.</p>
+<div id="36ea31c7" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>chk_dest(<span class="st">'/tmp/foo.txt'</span>, [<span class="st">'/tmp'</span>])</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>chk_dest(<span class="st">'~/tmp/foo.txt'</span>, [Path.home()<span class="op">/</span><span class="st">'tmp'</span>])</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="cf">try</span>: chk_dest(<span class="st">'/etc/passwd'</span>, [<span class="st">'/tmp'</span>])</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="cf">except</span> <span class="pp">PermissionError</span>: <span class="bu">print</span>(<span class="st">"Correctly blocked /etc/passwd"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Correctly blocked /etc/passwd</code></pre>
+</div>
+</div>
+<div id="c3f29bab" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.894742+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.897255+00:00&quot;,&quot;total&quot;:0.0025149200000029737}}" data-execution_count="16">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L158" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="openwritepolicy" class="level3">
+<h3 class="anchored" data-anchor-id="openwritepolicy">OpenWritePolicy</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> OpenWritePolicy(</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>args, <span class="op">**</span>kwargs</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Check open() only when mode is writable</em></p>
+</section>
+</div>
+<div id="dc94ca4b" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.897343+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.899827+00:00&quot;,&quot;total&quot;:0.0024854750000002923}}" data-execution_count="17">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L149" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="pathwritepolicy" class="level3">
+<h3 class="anchored" data-anchor-id="pathwritepolicy">PathWritePolicy</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> PathWritePolicy(</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>    target_pos:NoneType<span class="op">=</span><span class="va">None</span>, target_kw:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Check resolved Path self, optionally also target args</em></p>
+</section>
+</div>
+<div id="b266a729" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.899913+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.902377+00:00&quot;,&quot;total&quot;:0.0024668000000005463}}" data-execution_count="18">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L141" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="posallowpolicy" class="level3">
+<h3 class="anchored" data-anchor-id="posallowpolicy">PosAllowPolicy</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> PosAllowPolicy(</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>    pos:<span class="bu">int</span><span class="op">=</span><span class="dv">0</span>, kw:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Check positional/keyword path arg is an allowed destination; non-path buffers/handles are skipped</em></p>
+</section>
+</div>
+<div id="d60e375a" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.902463+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.904869+00:00&quot;,&quot;total&quot;:0.0024084610000016937}}" data-execution_count="19">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L137" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="allowpolicy" class="level3">
+<h3 class="anchored" data-anchor-id="allowpolicy">AllowPolicy</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> AllowPolicy(</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>args, <span class="op">**</span>kwargs</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Base for allow destination policies</em></p>
+</section>
+</div>
+<p>Three <a href="https://AnswerDotAI.github.io/pyskills/core.html#allowpolicy"><code>AllowPolicy</code></a> subclasses handle different allow-checking patterns. <a href="https://AnswerDotAI.github.io/pyskills/core.html#posallowpolicy"><code>PosAllowPolicy</code></a> only checks str/<code>os.PathLike</code>/bytes arguments: callables like <code>DataFrame.to_excel</code> or openpyxl’s <code>Workbook.save</code> also accept already-open file objects, whose destination was checked when they were opened — a policy crash on those would abort the run instead of denying it.</p>
+<div id="bd2f1fea" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.904956+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.905496+00:00&quot;,&quot;total&quot;:0.0005421130000016205}}" data-execution_count="20">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> io</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="56ceabcb" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>pp <span class="op">=</span> PosAllowPolicy(<span class="dv">1</span>, <span class="st">'dst'</span>)</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>pp(<span class="va">None</span>, [<span class="st">'src'</span>, <span class="st">'/tmp/ok'</span>], {}, {<span class="st">'ok_dests'</span>: [<span class="st">'/tmp'</span>]})</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> expect_fail(<span class="pp">PermissionError</span>): pp(<span class="va">None</span>, [<span class="st">'src'</span>, <span class="st">'/root/bad'</span>], {}, {<span class="st">'ok_dests'</span>: [<span class="st">'/tmp'</span>]})</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>pwp <span class="op">=</span> PathWritePolicy()</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>pwp(Path(<span class="st">'/tmp/f.txt'</span>), [], {}, {<span class="st">'ok_dests'</span>: [<span class="st">'/tmp'</span>]})</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> expect_fail(<span class="pp">PermissionError</span>): pwp(Path(<span class="st">'/etc/f.txt'</span>), [], {}, {<span class="st">'ok_dests'</span>: [<span class="st">'/tmp'</span>]})</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>owp <span class="op">=</span> OpenWritePolicy()</span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>owp(<span class="va">None</span>, [<span class="st">'/tmp/f.txt'</span>, <span class="st">'w'</span>], {}, {<span class="st">'ok_dests'</span>: [<span class="st">'/tmp'</span>]})</span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>owp(<span class="va">None</span>, [<span class="st">'/etc/passwd'</span>, <span class="st">'r'</span>], {}, {<span class="st">'ok_dests'</span>: [<span class="st">'/tmp'</span>]})</span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> expect_fail(<span class="pp">PermissionError</span>): owp(<span class="va">None</span>, [<span class="st">'/root/f.txt'</span>, <span class="st">'w'</span>], {}, {<span class="st">'ok_dests'</span>: [<span class="st">'/tmp'</span>]})</span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>pp(<span class="va">None</span>, [<span class="st">'src'</span>, io.BytesIO()], {}, {<span class="st">'ok_dests'</span>: [<span class="st">'/tmp'</span>]})</span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>pp(<span class="va">None</span>, [<span class="st">'src'</span>, <span class="bu">open</span>(<span class="st">'/dev/null'</span>, <span class="st">'wb'</span>)], {}, {<span class="st">'ok_dests'</span>: [<span class="st">'/tmp'</span>]})</span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>pp(<span class="va">None</span>, [<span class="st">'src'</span>, <span class="st">b'/tmp/ok'</span>], {}, {<span class="st">'ok_dests'</span>: [<span class="st">'/tmp'</span>]})</span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> expect_fail(<span class="pp">PermissionError</span>): pp(<span class="va">None</span>, [<span class="st">'src'</span>, <span class="st">b'/root/bad'</span>], {}, {<span class="st">'ok_dests'</span>: [<span class="st">'/tmp'</span>]})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Allow policies are stored as <code>(name, AllowPolicy)</code> tuples directly inside <code>__pytools__</code> sets.</p>
+</section>
+</section>
+<section id="doc-xdir" class="level2">
+<h2 class="anchored" data-anchor-id="doc-xdir">doc / xdir</h2>
+<div id="afe7cbeb" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.907835+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.910860+00:00&quot;,&quot;total&quot;:0.003027006000003496}}" data-execution_count="22">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L170" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="resolve" class="level3">
+<h3 class="anchored" data-anchor-id="resolve">resolve</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> resolve(</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>    sym_nm:<span class="bu">str</span>, <span class="co"># Dotted symbol path, with optional [n] indexing, e.g. "module.attr.subattr[1]"</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Resolve a dotted symbol string to its Python object, with optional [n] indexing</em></p>
+</section>
+</div>
+<div id="7b2194ea" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.910948+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.913284+00:00&quot;,&quot;total&quot;:0.002338681000004783}}" data-execution_count="23">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L166" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="symbolnotfound" class="level3">
+<h3 class="anchored" data-anchor-id="symbolnotfound">SymbolNotFound</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> SymbolNotFound(</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>args, <span class="op">**</span>kwargs</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Common base class for all non-exit exceptions.</em></p>
+</section>
+</div>
+<div id="3e13f201" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> expect_fail(SymbolNotFound): resolve(<span class="st">'abc'</span>)</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>resolve(<span class="st">'resolve'</span>), resolve(<span class="st">'len'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>(&lt;function __main__.resolve(sym_nm: str)&gt;, &lt;function len(obj, /)&gt;)</code></pre>
+</div>
+</div>
+<div id="e35a54f2" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.913466+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.914801+00:00&quot;,&quot;total&quot;:0.0013380110000014156}}" data-execution_count="24">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyskills.skill</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="f664c1be" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _is_own(pyskills.skill, <span class="st">'skill_test_func'</span>)</span>
+<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> _is_own(pyskills.skill, <span class="st">'SkillTestClass'</span>)</span>
+<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="kw">not</span> _is_own(pyskills.skill, <span class="st">'inspect'</span>)</span>
+<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="kw">not</span> _is_own(pyskills.skill, <span class="st">'_private'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="091b00b6" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.933191+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.936276+00:00&quot;,&quot;total&quot;:0.003088139999995576}}" data-execution_count="28">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L242" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="xdir" class="level3">
+<h3 class="anchored" data-anchor-id="xdir">xdir</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> xdir(</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>    sym:<span class="bu">str</span> <span class="op">|</span> <span class="bu">object</span>, <span class="co"># Module, class, or instance to inspect</span></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>    q:<span class="bu">str</span><span class="op">=</span><span class="va">None</span>, <span class="co"># Optional case-insensitive regex over names</span></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Filtered names for public symbols of a module, class, or instance (a plain instance lists its class)</em></p>
+</section>
+</div>
+<p><a href="https://AnswerDotAI.github.io/pyskills/core.html#xdir"><code>xdir</code></a> returns public names for a module, class, or instance. Modules respect <code>__all__</code> and include explicitly imported sibling submodules; classes include <code>__init__</code> and public methods; instances with a custom <code>__dir__</code> list their dynamic surface, and plain instances list their class’s API. Pass <code>q</code> to filter the names with a case-insensitive regex.</p>
+<div id="5c5cec60" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> xdir(pyskills.skill)</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>test_eq(x, xdir(<span class="st">'pyskills.skill'</span>))</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>x</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>['SkillTestClass',
+ 'async_skill_test_func',
+ 'skill_test_func',
+ 'pyskills.createskill']</code></pre>
+</div>
+</div>
+<div id="eb354601" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.938636+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.941344+00:00&quot;,&quot;total&quot;:0.0027103239999988205}}" data-execution_count="30">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L269" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="doc" class="level3">
+<h3 class="anchored" data-anchor-id="doc">doc</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> doc(</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>    sym:<span class="bu">str</span> <span class="op">|</span> <span class="bu">object</span>, <span class="co"># Object (or dotted name) to document</span></span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>syms:<span class="bu">str</span> <span class="op">|</span> <span class="bu">object</span>, <span class="co"># More objects: each doc appended as its own blank-line-separated section</span></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>    <span class="bu">all</span>:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span>, <span class="co"># Show symbol listings elided by `__pyskill_sigs__=False`?</span></span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a>)<span class="op">-&gt;</span><span class="bu">str</span>:</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Docstring of modules, classes, functions, instances or any other Python objects.</em></p>
+</section>
+</div>
+<p>A dynamic surface keeps ownership with the instance: no class read can show it, so it gets no shared key.</p>
+<p>Unreadable <em>source</em> – typically a live kernel holding function objects whose recorded locations have drifted from an edited file – degrades in layers rather than raising: fastcore’s renderer swaps the docments table for the bare signature (with a warning naming the symbol), so <a href="https://AnswerDotAI.github.io/pyskills/core.html#doc"><code>doc</code></a> still succeeds; and if rendering fails beyond that, <a href="https://AnswerDotAI.github.io/pyskills/core.html#doc"><code>doc</code></a> falls back to the docstring plus a note naming the error. Either way the fix for the stale state is a kernel restart:</p>
+<div id="322f5cc9" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _brk(): <span class="cf">pass</span></span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>_brk.__doc__ <span class="op">=</span> <span class="st">'A stale function.'</span></span>
+<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>_brk.__code__ <span class="op">=</span> _brk.__code__.replace(co_firstlineno<span class="op">=</span><span class="dv">99999</span>)</span>
+<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> warnings.catch_warnings():</span>
+<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>    warnings.simplefilter(<span class="st">'ignore'</span>)</span>
+<span id="cb41-6"><a href="#cb41-6" aria-hidden="true" tabindex="-1"></a>    res <span class="op">=</span> <span class="bu">str</span>(doc(_brk))</span>
+<span id="cb41-7"><a href="#cb41-7" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'A stale function.'</span> <span class="kw">in</span> res</span>
+<span id="cb41-8"><a href="#cb41-8" aria-hidden="true" tabindex="-1"></a>res</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>For a function, <a href="https://AnswerDotAI.github.io/pyskills/core.html#doc"><code>doc</code></a> renders the docstring and full signature with docments (parameter comments):</p>
+<div id="f87d651d" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>d <span class="op">=</span> doc(pyskills.skill.skill_test_func)</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>test_eq(d, doc(<span class="st">'pyskills.skill.skill_test_func'</span>))</span>
+<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>d</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>def skill_test_func(
+    x:int=0, # the input
+)-&gt;str: # the output"""A test function"""
+# doced: skill_test_func='dbcd'</code></pre>
+</div>
+</div>
+<div id="f6f35a67" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.943812+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.946514+00:00&quot;,&quot;total&quot;:0.0027038529999998673}}" data-execution_count="32">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L294" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="fmt_sig" class="level3">
+<h3 class="anchored" data-anchor-id="fmt_sig">fmt_sig</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> fmt_sig(</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>    f, ps:NoneType<span class="op">=</span><span class="va">None</span></span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Call self as a function.</em></p>
+</section>
+</div>
+<p>This is a simple helper that removes module names from <code>str(signature(...))</code>:</p>
+<div id="1a7ce1d1" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> f(a:Path<span class="op">|</span><span class="bu">str</span> <span class="op">=</span> <span class="st">"aa"</span>): ...</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(fmt_sig(f))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>(a: Path | str = 'aa')</code></pre>
+</div>
+</div>
+<p>A function may declare <code>Parameter.empty</code> itself as a default value (a sentinel idiom, e.g.&nbsp;<code>fasthtml.core.add_sig_param</code>). Plain <code>inspect.signature</code> reads that back as “no default”, which makes the signature fail validation when rebuilt. <a href="https://AnswerDotAI.github.io/pyskills/core.html#fmt_sig"><code>fmt_sig</code></a> uses <code>signature_ex</code>, which keeps the declared default distinct, so such functions render correctly:</p>
+<div id="75a8b245" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> f(a, b<span class="op">=</span><span class="dv">1</span>, default<span class="op">=</span>inspect.Parameter.empty): ...</span>
+<span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>test_eq(fmt_sig(f), <span class="st">'(a, b=1, default=Parameter.empty)'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>For a class, <a href="https://AnswerDotAI.github.io/pyskills/core.html#doc"><code>doc</code></a> shows the class hierarchy, docstring, <code>__init__</code> signature, and all public methods/properties with their first docstring line:</p>
+<div id="7f2839fb" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>doc(pyskills.skill.SkillTestClass)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>class SkillTestClass(str):
+    """Some class.
+    More info about it."""
+    def __init__(self): ...
+    def f(self, x: int = 0) -&gt; str: ...  # A test method
+    @property
+    def g(self) -&gt; str: ...  # A test prop
+# doced: SkillTestClass='2d21'</code></pre>
+</div>
+</div>
+<p>For a module, <a href="https://AnswerDotAI.github.io/pyskills/core.html#doc"><code>doc</code></a> shows the docstring, all public classes and functions with their signatures and first docstring line, submodules, and any <a href="https://AnswerDotAI.github.io/pyskills/core.html#allow"><code>allow()</code></a> calls:</p>
+<div id="12b9eb87" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(doc(pyskills.skill)[<span class="op">-</span><span class="dv">450</span>:])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>)` them as a smoke test.
+
+## Creating pyskills
+
+`from pyskills import createskill; doc(createskill)` for how to build and register your own pyskill modules.
+"""
+
+## types:
+- class SkillTestClass(str): ...  # Some class.
+
+## functions:
+- async def async_skill_test_func(x: int = 0) -&gt; str: ...  # A test function…
+- def skill_test_func(x: int = 0) -&gt; str: ...  # A test function…
+
+## elided: 1 submodules. `doc('pyskills.skill', all=True)` lists them.</code></pre>
+</div>
+</div>
+<p>A module with a very large API surface can set <code>__pyskill_sigs__ = False</code> to elide the types/functions listing from its <a href="https://AnswerDotAI.github.io/pyskills/core.html#doc"><code>doc()</code></a> output: its docstring is then the whole answer, with one line noting the elision. Pass <code>all=True</code> to <a href="https://AnswerDotAI.github.io/pyskills/core.html#doc"><code>doc</code></a> to list the elided symbols anyway.</p>
+<p>A <em>package</em> with a substantive docstring — more than the default summary line plus docs link — is treated as curated, so <a href="https://AnswerDotAI.github.io/pyskills/core.html#doc"><code>doc()</code></a> elides its mechanical submodule listing too: a curated package docstring, like the ones nbdev generates from a project’s notebooks, already says which modules matter. <code>all=True</code> restores the listing:</p>
+<div id="26b13f76" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.953554+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.954066+00:00&quot;,&quot;total&quot;:0.0005142409999976394}}" data-execution_count="35">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pyskills</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="a8d4c83e" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>s <span class="op">=</span> doc(pyskills)</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'## submodules:'</span> <span class="kw">not</span> <span class="kw">in</span> s</span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'## submodules:'</span> <span class="kw">in</span> doc(pyskills, <span class="bu">all</span><span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(s[<span class="op">-</span><span class="dv">350</span>:])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>" (units of LLM-usable functionality) via standard Python entry points. An LLM harness (e.g. solveit) discovers available pyskills without importing them, reads lightweight descriptions via AST inspection, and selectively loads chosen pyskills into context using standard imports.
+"""
+
+## elided: 3 submodules. `doc('pyskills', all=True)` lists them.</code></pre>
+</div>
+</div>
+<p>A trailing <code>…</code> on an overview function line marks elided detail: the function has docments, or a docstring beyond its first line, so <code>doc(func)</code> will show more than the overview line did. A complete overview line instead ends with its bracketed doc key: the line already shows everything <code>doc(func)</code> would, so the key can be declared straight from the summary.</p>
+<div id="997d1625" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb55"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _plain(x): <span class="cf">return</span> x</span>
+<span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _rich(x:<span class="bu">int</span><span class="op">=</span><span class="dv">0</span> <span class="co"># some param</span></span>
+<span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a>    ): <span class="cf">return</span> <span class="bu">str</span>(x)</span>
+<span id="cb55-4"><a href="#cb55-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _long(x):</span>
+<span id="cb55-5"><a href="#cb55-5" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""Summary</span></span>
+<span id="cb55-6"><a href="#cb55-6" aria-hidden="true" tabindex="-1"></a><span class="co">    More detail."""</span></span>
+<span id="cb55-7"><a href="#cb55-7" aria-hidden="true" tabindex="-1"></a>_m <span class="op">=</span> types.ModuleType(<span class="st">'_m'</span>)</span>
+<span id="cb55-8"><a href="#cb55-8" aria-hidden="true" tabindex="-1"></a>_m.<span class="va">__all__</span> <span class="op">=</span> [<span class="st">'plain'</span>,<span class="st">'rich'</span>,<span class="st">'long'</span>]</span>
+<span id="cb55-9"><a href="#cb55-9" aria-hidden="true" tabindex="-1"></a>_m.plain,_m.rich,_m.<span class="bu">long</span> <span class="op">=</span> _plain,_rich,_long</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="fe50aaa8" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>s <span class="op">=</span> doc(_m)</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>fl <span class="op">=</span> {l.split()[<span class="dv">2</span>].split(<span class="st">'('</span>)[<span class="dv">0</span>]:l <span class="cf">for</span> l <span class="kw">in</span> s.splitlines() <span class="cf">if</span> l.startswith(<span class="st">'- def '</span>)}</span>
+<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>test_eq([fl[k].endswith(<span class="st">'…'</span>) <span class="cf">for</span> k <span class="kw">in</span> (<span class="st">'plain'</span>,<span class="st">'rich'</span>,<span class="st">'long'</span>)], [<span class="va">False</span>,<span class="va">True</span>,<span class="va">True</span>])</span>
+<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a>test_eq(fl[<span class="st">'plain'</span>], <span class="st">"- def plain(x)"</span>)</span>
+<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>s</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code># module _m:
+
+
+## functions:
+- def plain(x) [c74a]
+- def rich(x: int = 0): …  # …
+- def long(x): ...  # Summary…</code></pre>
+</div>
+</div>
+<section id="shared-param-groups" class="level3">
+<h3 class="anchored" data-anchor-id="shared-param-groups">Shared param groups</h3>
+<p>Toolkit modules often share one parameter vocabulary across many functions: rgapi’s walk filters appear identically in <code>fd</code>, <code>ls</code>, <code>rg</code>, and <code>nbrg</code>, and fastcore’s editing ops repeat each base op’s params in every carrier variant. Rendering those identical blocks in every overview line costs tokens without informing. A module can declare such groups in <code>__pyskill_params__</code>, a dict of group name to param names; the overview then collapses each function whose signature contains a whole group to a <code>**group</code> collector, and documents the group once in a <code>## shared params:</code> section, with docments taken from the first matching function:</p>
+<div id="f1b52ad5" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb58"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _fd(root:<span class="bu">str</span><span class="op">=</span><span class="st">'.'</span>, hidden:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span> <span class="co"># Include hidden files?</span></span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>    ): ...</span>
+<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _rg(pat, root:<span class="bu">str</span><span class="op">=</span><span class="st">'.'</span>, hidden:<span class="bu">bool</span><span class="op">=</span><span class="va">False</span>): ...</span>
+<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a>_w <span class="op">=</span> types.ModuleType(<span class="st">'_w'</span>)</span>
+<span id="cb58-5"><a href="#cb58-5" aria-hidden="true" tabindex="-1"></a>_w.<span class="va">__all__</span> <span class="op">=</span> [<span class="st">'fd'</span>,<span class="st">'rg'</span>]</span>
+<span id="cb58-6"><a href="#cb58-6" aria-hidden="true" tabindex="-1"></a>_w.__pyskill_params__ <span class="op">=</span> {<span class="st">'walk_params'</span>: (<span class="st">'root'</span>,<span class="st">'hidden'</span>)}</span>
+<span id="cb58-7"><a href="#cb58-7" aria-hidden="true" tabindex="-1"></a>_w.fd,_w.rg <span class="op">=</span> _fd,_rg</span>
+<span id="cb58-8"><a href="#cb58-8" aria-hidden="true" tabindex="-1"></a>s <span class="op">=</span> doc(_w)</span>
+<span id="cb58-9"><a href="#cb58-9" aria-hidden="true" tabindex="-1"></a>fl <span class="op">=</span> {l.split()[<span class="dv">2</span>].split(<span class="st">'('</span>)[<span class="dv">0</span>]:l <span class="cf">for</span> l <span class="kw">in</span> s.splitlines() <span class="cf">if</span> l.startswith(<span class="st">'- def '</span>)}</span>
+<span id="cb58-10"><a href="#cb58-10" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'**walk_params'</span> <span class="kw">in</span> fl[<span class="st">'fd'</span>] <span class="kw">and</span> <span class="st">'**walk_params'</span> <span class="kw">in</span> fl[<span class="st">'rg'</span>]</span>
+<span id="cb58-11"><a href="#cb58-11" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'root'</span> <span class="kw">not</span> <span class="kw">in</span> fl[<span class="st">'rg'</span>] <span class="kw">and</span> <span class="st">'pat'</span> <span class="kw">in</span> fl[<span class="st">'rg'</span>]</span>
+<span id="cb58-12"><a href="#cb58-12" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'## shared params:'</span> <span class="kw">in</span> s <span class="kw">and</span> <span class="st">'Include hidden files?'</span> <span class="kw">in</span> s</span>
+<span id="cb58-13"><a href="#cb58-13" aria-hidden="true" tabindex="-1"></a>s</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code># module _w:
+
+
+## functions:
+- def fd(**walk_params): …  # …
+- def rg(pat, **walk_params) [1eb6]
+
+## shared params:
+- **walk_params (from `fd`):
+    root: str = '.',
+    hidden: bool = False, # Include hidden files?</code></pre>
+</div>
+</div>
+<p>A function only joins a group when every group param matches the first matching function’s types and defaults exactly. A differing default is information (<code>ls</code> is <code>fd</code> with listing defaults, and the difference is the point), so that function keeps its full inline signature, and the drift is warned about in case it is unintended:</p>
+<div id="a6df7033" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb60"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _ls(root:<span class="bu">str</span><span class="op">=</span><span class="st">'.'</span>, hidden:<span class="bu">bool</span><span class="op">=</span><span class="va">True</span>): ...</span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>_w.ls <span class="op">=</span> _ls</span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a>_w.<span class="va">__all__</span> <span class="op">=</span> [<span class="st">'fd'</span>,<span class="st">'rg'</span>,<span class="st">'ls'</span>]</span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> warnings.catch_warnings(record<span class="op">=</span><span class="va">True</span>) <span class="im">as</span> w:</span>
+<span id="cb60-5"><a href="#cb60-5" aria-hidden="true" tabindex="-1"></a>    warnings.simplefilter(<span class="st">'always'</span>)</span>
+<span id="cb60-6"><a href="#cb60-6" aria-hidden="true" tabindex="-1"></a>    s2 <span class="op">=</span> doc(_w)</span>
+<span id="cb60-7"><a href="#cb60-7" aria-hidden="true" tabindex="-1"></a>fl2 <span class="op">=</span> {l.split()[<span class="dv">2</span>].split(<span class="st">'('</span>)[<span class="dv">0</span>]:l <span class="cf">for</span> l <span class="kw">in</span> s2.splitlines() <span class="cf">if</span> l.startswith(<span class="st">'- def '</span>)}</span>
+<span id="cb60-8"><a href="#cb60-8" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'**walk_params'</span> <span class="kw">not</span> <span class="kw">in</span> fl2[<span class="st">'ls'</span>] <span class="kw">and</span> <span class="st">'hidden'</span> <span class="kw">in</span> fl2[<span class="st">'ls'</span>]</span>
+<span id="cb60-9"><a href="#cb60-9" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> <span class="st">'**walk_params'</span> <span class="kw">in</span> fl2[<span class="st">'fd'</span>]</span>
+<span id="cb60-10"><a href="#cb60-10" aria-hidden="true" tabindex="-1"></a><span class="cf">assert</span> w <span class="kw">and</span> <span class="st">'walk_params'</span> <span class="kw">in</span> <span class="bu">str</span>(w[<span class="dv">0</span>].message)</span>
+<span id="cb60-11"><a href="#cb60-11" aria-hidden="true" tabindex="-1"></a>s2</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code># module _w:
+
+
+## functions:
+- def fd(**walk_params): …  # …
+- def rg(pat, **walk_params) [1eb6]
+- def ls(root: str = '.', hidden: bool = True) [77e1]
+
+## shared params:
+- **walk_params (from `fd`):
+    root: str = '.',
+    hidden: bool = False, # Include hidden files?</code></pre>
+</div>
+</div>
+<div id="82b3a4ed" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb62"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Pet:</span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, name, sound): <span class="va">self</span>.name,<span class="va">self</span>.sound <span class="op">=</span> name,sound</span>
+<span id="cb62-3"><a href="#cb62-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> speak(<span class="va">self</span>):</span>
+<span id="cb62-4"><a href="#cb62-4" aria-hidden="true" tabindex="-1"></a>        <span class="co">"Make the pet's sound"</span></span>
+<span id="cb62-5"><a href="#cb62-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="ss">f'</span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>name<span class="sc">}</span><span class="ss"> says </span><span class="sc">{</span><span class="va">self</span><span class="sc">.</span>sound<span class="sc">}</span><span class="ss">!'</span></span>
+<span id="cb62-6"><a href="#cb62-6" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__dir__</span>(<span class="va">self</span>): <span class="cf">return</span> [<span class="st">'name'</span>, <span class="st">'sound'</span>, <span class="st">'speak'</span>]</span>
+<span id="cb62-7"><a href="#cb62-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-8"><a href="#cb62-8" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Puppy(Pet): <span class="cf">pass</span></span>
+<span id="cb62-9"><a href="#cb62-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb62-10"><a href="#cb62-10" aria-hidden="true" tabindex="-1"></a>p <span class="op">=</span> Pet(<span class="st">'Rex'</span>, <span class="st">'woof'</span>)</span>
+<span id="cb62-11"><a href="#cb62-11" aria-hidden="true" tabindex="-1"></a>test_eq(xdir(p, <span class="st">'sp'</span>), [<span class="st">'speak'</span>])</span>
+<span id="cb62-12"><a href="#cb62-12" aria-hidden="true" tabindex="-1"></a>test_eq(xdir(Puppy(<span class="st">'Fido'</span>, <span class="st">'yip'</span>), <span class="st">'sp'</span>), [<span class="st">'speak'</span>])</span>
+<span id="cb62-13"><a href="#cb62-13" aria-hidden="true" tabindex="-1"></a>doc(p)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>Instance of type Pet:
+- name: str = 'Rex'
+- sound: str = 'woof'
+- speak()  # Make the pet's sound</code></pre>
+</div>
+</div>
+<p>Most classes define no custom <code>__dir__</code>. For their instances, <a href="https://AnswerDotAI.github.io/pyskills/core.html#xdir"><code>xdir</code></a> answers “what can I call on this?” with the class’s own listing, so an API client object like kaggle’s <code>KaggleApi</code> inspects directly. <a href="https://AnswerDotAI.github.io/pyskills/core.html#doc"><code>doc</code></a> is unaffected: a plain instance still displays as its repr.</p>
+<div id="ef4d56d6" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb64"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a><span class="kw">class</span> Client:</span>
+<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, key): <span class="va">self</span>.key <span class="op">=</span> key</span>
+<span id="cb64-3"><a href="#cb64-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> fetch(<span class="va">self</span>):</span>
+<span id="cb64-4"><a href="#cb64-4" aria-hidden="true" tabindex="-1"></a>        <span class="co">"Fetch a record"</span></span>
+<span id="cb64-5"><a href="#cb64-5" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">self</span>.key</span>
+<span id="cb64-6"><a href="#cb64-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb64-7"><a href="#cb64-7" aria-hidden="true" tabindex="-1"></a>test_eq(xdir(Client(<span class="st">'x'</span>), <span class="st">'fetch'</span>), [<span class="st">'fetch'</span>])</span>
+<span id="cb64-8"><a href="#cb64-8" aria-hidden="true" tabindex="-1"></a>xdir(Client(<span class="st">'x'</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>['__init__', 'fetch']</code></pre>
+</div>
+</div>
+<div id="4d9ac7a0" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.961152+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.964390+00:00&quot;,&quot;total&quot;:0.0032397140000028912}}" data-execution_count="39">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L406" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="docfind" class="level3">
+<h3 class="anchored" data-anchor-id="docfind">docfind</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb66"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> docfind(</span>
+<span id="cb66-2"><a href="#cb66-2" aria-hidden="true" tabindex="-1"></a>    o:<span class="bu">str</span> <span class="op">|</span> <span class="bu">object</span>, q:<span class="bu">str</span>, n:<span class="bu">int</span><span class="op">=</span><span class="dv">2</span>, _pre:<span class="bu">str</span><span class="op">=</span><span class="st">''</span></span>
+<span id="cb66-3"><a href="#cb66-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Search <a href="https://AnswerDotAI.github.io/pyskills/core.html#doc"><code>doc()</code></a> recursively through <code>xdir(o)</code>, looking at submodules, classes, and functions, to depth <code>n</code></em></p>
+</section>
+</div>
+<div id="09bb95c6" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb67"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a>docfind(pyskills.skill, <span class="st">'test'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>[' // # module pyskills.skill:',
+ 'SkillTestClass // class SkillTestClass(str):',
+ 'SkillTestClass.f // def f(',
+ 'SkillTestClass.g // def g()-&gt;str:"""A test prop"""',
+ 'async_skill_test_func // async def async_skill_test_func(',
+ 'skill_test_func // def skill_test_func(']</code></pre>
+</div>
+</div>
+<div id="050b01f6" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.964527+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.965042+00:00&quot;,&quot;total&quot;:0.0005173269999971808}}" data-execution_count="40">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb69"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> fastcore.tools</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="7156337e" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb70"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a>doc(fastcore.tools)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code># module fastcore.tools:
+
+"""Text and file editing primitives shared by the fastai editing tools
+
+The editors here are string-level: each takes `text` plus edit parameters and returns the new text, raising `ValueError` when an edit can't apply. The file tools below wrap them with path I/O and diff reporting; message-level wrappers live in aidialog. (This module previously held experimental LLM path-editing and command tools, superseded by safecmd, rgapi, and the tools here.) Naming, parameter, and workflow conventions for the whole editing toolkit, this module included, are documented in `fastcore.editskill`, which also re-exports these tools alongside `fastcore.nbio`'s.
+
+`line_hash`, `lnhash`, and `lnhash_at` implement the [exhash](https://answerdotai.github.io/exhash) line-address format in pure Python: `lineno|hash|`, where the hash is 4 hex chars of crc32. They let any tool create lnhash-addressed views of text it holds, without depending on the exhash package.
+
+File tools wrap the primitives with path I/O, returning unified diffs of what changed ("none: No changes." / "error: ..." otherwise). The path is the first argument, e.g:
+
+    view_file('~/a/b.py', 3)
+    create_file('~/a/b/c.py', 'content here')
+    file_str_replace('myfile.py', 'old_name', 'new_name')
+    file_del_lines('myfile.py', 2, 4)
+    file_replace_lines('myfile.py', new_content=src)   # no line numbers: replace the entire contents
+
+`file_str_replace`, `file_strs_replace`, and `file_del_lines` support `re_filter` and `invert_filter` for targeting only lines matching (or not matching) a regex, like ex's `g//` and `g!//`, combined with `start_line`/`end_line` to restrict to a region. `ast_replace(text, repls)` and `file_ast_replace(path, repls)` apply ast-grep `(pattern, replacement)` rules with `$VAR` metavariables (requires the optional `remold` package).
+
+Docs: https://fastcore.fast.ai/tools.html.md
+"""
+
+## functions:
+- def file_insert_line(path: str, insert_line: int, new_str: str): ...  # Insert new_str at specified line number…
+- def file_str_replace(path: str, old_str: str, new_str: str, **replace_params): ...  # Replace occurrence(s) of old_str with new_str…
+- def file_strs_replace(path: str, old_strs: list[str], new_strs: list[str], **replace_params): ...  # Replace multiple strings simultaneously…
+- def file_replace_lines(path: str, start_line: int = None, end_line: int = None, new_content: str = ''): ...  # Replace line range with new content; the defaults replace the entire contents…
+- def file_del_lines(path: str, start_line: int, end_line: int, re_filter: str = None, invert_filter: bool = False): ...  # Delete line range; deletion is destructive, so both line numbers must be given explicitly (`1, -1` for all lines)…
+- def file_ast_replace(path: str, repls: list): ...  # Apply ast-grep structural pattern replacements to python source…
+- def insert_line(text: str, insert_line: int, new_str: str): ...  # Insert new_str at specified line number…
+- def str_replace(text: str, old_str: str, new_str: str, **replace_params): ...  # Replace occurrence(s) of old_str with new_str…
+- def strs_replace(text: str, old_strs: list[str], new_strs: list[str], **replace_params): ...  # Replace multiple strings simultaneously…
+- def replace_lines(text: str, start_line: int = None, end_line: int = None, new_content: str = ''): ...  # Replace line range with new content; the defaults replace the entire contents…
+- def del_lines(text: str, start_line: int, end_line: int, re_filter: str = None, invert_filter: bool = False): ...  # Delete line range; deletion is destructive, so both line numbers must be given explicitly (`1, -1` for all lines)…
+- def line_hash(line: str) -&gt; str: ...  # 4-char hex hash of `line`…
+- def lnhash(lineno: int, line: str) -&gt; str: ...  # `lineno|hash|` exhash address for `line` at `lineno`…
+- def lnhash_at(s: str | list | tuple, line: int) -&gt; str: ...  # `lineno|hash|` exhash address of line `line` of `s`…
+- def view_file(path: str, start_line: int = 1, end_line: int = None, nums: bool = True, lnhashs: bool = False): ...  # Read file contents, optionally limited to 1-based line range…
+- def create_file(path: str, contents: str, overwrite: bool = False): ...  # Create a new file with contents. Error if file exists, unless `overwrite`.…
+- def file_edit(f, name=None): ...  # Wrap text editor `f` as a file editing function: `path` addressing, diff-or-error return [f739]
+- def ast_replace(text: str, repls: list): ...  # Apply ast-grep structural pattern replacements to python source…
+
+## shared params:
+- **replace_params (from `file_str_replace`):
+    start_line: int = None, # Optional 1-based start line to limit search
+    end_line: int = None, # Optional 1-based end line to limit search
+    n_matches: int = None, # Max replacements (None=all)
+    re_filter: str = None, # If provided, only process lines matching this regex (like g// in ex)
+    invert_filter: bool = False, # Invert the filter (like g!// in ex)
+    use_regex: bool = False, # Treat old_str as a regex, and new_str as an `re.sub` template?</code></pre>
+</div>
+</div>
+<div id="650b1ca5" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb72"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a>doc(fastcore.tools.create_file)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>def create_file(
+    path:str, # Path to create (expands `~` if needed)
+    contents:str, # Contents of file to create
+    overwrite:bool=False, # Replace the file if it already exists?
+):"""Create a new file with contents. Error if file exists, unless `overwrite`."""
+# doced: create_file='6883'</code></pre>
+</div>
+</div>
+<p>Passing several objects returns each one’s doc as its own blank-line-separated section – so a module overview and the functions you’re about to use can be read in one call:</p>
+<div id="4a686362" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb74"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a>d2 <span class="op">=</span> doc(fastcore.tools, <span class="st">'fastcore.tools.create_file'</span>)</span>
+<span id="cb74-2"><a href="#cb74-2" aria-hidden="true" tabindex="-1"></a>test_eq(d2, doc(fastcore.tools) <span class="op">+</span> <span class="st">'</span><span class="ch">\n\n</span><span class="st">'</span> <span class="op">+</span> doc(fastcore.tools.create_file))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+</section>
+<section id="skills-registration" class="level2">
+<h2 class="anchored" data-anchor-id="skills-registration">Skills registration</h2>
+<p>Pyskills can be added as standard modules with pyproject entrypoints. But for convenience, they can also be added to a custom pyskills XDG directory, which is automatically added to sys.path.</p>
+<div id="2e34ba46" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.966834+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.969749+00:00&quot;,&quot;total&quot;:0.0029170709999988276}}" data-execution_count="42">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L427" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="ensure_pyskills_dir" class="level3">
+<h3 class="anchored" data-anchor-id="ensure_pyskills_dir">ensure_pyskills_dir</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb75"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> ensure_pyskills_dir():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Create xdg pyskills dir and .pth file if needed</em></p>
+</section>
+</div>
+<div id="dc4950c8" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.969834+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.972116+00:00&quot;,&quot;total&quot;:0.0022841879999973003}}" data-execution_count="43">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L423" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="pyskills_dir" class="level3">
+<h3 class="anchored" data-anchor-id="pyskills_dir">pyskills_dir</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb76"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> pyskills_dir():</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Directory for user pyskills</em></p>
+</section>
+</div>
+<p><a href="https://AnswerDotAI.github.io/pyskills/core.html#pyskills_dir"><code>pyskills_dir</code></a> returns the XDG data home path for user pyskills. <a href="https://AnswerDotAI.github.io/pyskills/core.html#ensure_pyskills_dir"><code>ensure_pyskills_dir</code></a> creates that directory if needed and writes a <code>.pth</code> file into <code>site-packages</code> so Python automatically adds it to <code>sys.path</code>. You can drop pyskill modules there without manual path configuration and which can be available across venvs.</p>
+<div id="dc3a2ee9" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.973633+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.976066+00:00&quot;,&quot;total&quot;:0.002436361999997416}}" data-execution_count="46">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L449" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="clear_mod" class="level3">
+<h3 class="anchored" data-anchor-id="clear_mod">clear_mod</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb77"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> clear_mod(</span>
+<span id="cb77-2"><a href="#cb77-2" aria-hidden="true" tabindex="-1"></a>    prefix</span>
+<span id="cb77-3"><a href="#cb77-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Clear modules starting with <code>prefix</code> from python caches</em></p>
+</section>
+</div>
+<p><a href="https://AnswerDotAI.github.io/pyskills/core.html#clear_mod"><code>clear_mod</code></a> purges all cached modules matching a prefix from <code>sys.modules</code> and invalidates import caches, ensuring a fresh import on next access. Used after enabling/disabling pyskills so changes take effect immediately.</p>
+<div id="65f4b31b" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.978025+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.980969+00:00&quot;,&quot;total&quot;:0.002947306999999455}}" data-execution_count="48">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L466" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="register_pyskill" class="level3">
+<h3 class="anchored" data-anchor-id="register_pyskill">register_pyskill</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb78"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> register_pyskill(</span>
+<span id="cb78-2"><a href="#cb78-2" aria-hidden="true" tabindex="-1"></a>    name, docstr, code:<span class="bu">str</span><span class="op">=</span><span class="st">''</span></span>
+<span id="cb78-3"><a href="#cb78-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Register a pyskill module <code>name</code> in the xdg pyskills dir</em></p>
+</section>
+</div>
+<div id="a8df0f34" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.981057+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.983723+00:00&quot;,&quot;total&quot;:0.002668896999999504}}" data-execution_count="49">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L458" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="enable_pyskill" class="level3">
+<h3 class="anchored" data-anchor-id="enable_pyskill">enable_pyskill</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb79"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> enable_pyskill(</span>
+<span id="cb79-2"><a href="#cb79-2" aria-hidden="true" tabindex="-1"></a>    name</span>
+<span id="cb79-3"><a href="#cb79-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Enable pyskill <code>name</code> by creating its dist-info entry point</em></p>
+</section>
+</div>
+<p><a href="https://AnswerDotAI.github.io/pyskills/core.html#enable_pyskill"><code>enable_pyskill</code></a> creates a minimal <code>dist-info</code> directory with an entry point so the pyskill is listed. <a href="https://AnswerDotAI.github.io/pyskills/core.html#register_pyskill"><code>register_pyskill</code></a> also writes an actual module file (with docstring and code) into the pyskills directory, and creates any needed <code>__init__.py</code> files for nested packages.</p>
+<p>This lets you programmatically create and register a pyskill without a full package install.</p>
+<div id="e344a77b" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.984631+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.987086+00:00&quot;,&quot;total&quot;:0.0024575320000010947}}" data-execution_count="51">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L477" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="disable_pyskill" class="level3">
+<h3 class="anchored" data-anchor-id="disable_pyskill">disable_pyskill</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb80"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> disable_pyskill(</span>
+<span id="cb80-2"><a href="#cb80-2" aria-hidden="true" tabindex="-1"></a>    name</span>
+<span id="cb80-3"><a href="#cb80-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Disable pyskill <code>name</code> by removing its dist-info entry point</em></p>
+</section>
+</div>
+<p><a href="https://AnswerDotAI.github.io/pyskills/core.html#disable_pyskill"><code>disable_pyskill</code></a> removes the <code>dist-info</code> directory for a pyskill, so it no longer appears in entry point discovery. It also clears the module cache so the pyskill is fully unloaded.</p>
+<div id="68342af6" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;execution&quot;,&quot;value&quot;:{&quot;iopub.execute_input&quot;:&quot;2026-09-04T04:55:38.988231+00:00&quot;,&quot;shell.execute_reply&quot;:&quot;2026-09-04T04:55:38.990920+00:00&quot;,&quot;total&quot;:0.002690967999996019}}" data-execution_count="53">
+<hr>
+<p><a href="https://github.com/AnswerDotAI/pyskills/blob/main/pyskills/core.py#L484" target="_blank" style="float:right; font-size:smaller">source</a></p>
+<section id="delete_pyskill" class="level3">
+<h3 class="anchored" data-anchor-id="delete_pyskill">delete_pyskill</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb81"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> delete_pyskill(</span>
+<span id="cb81-2"><a href="#cb81-2" aria-hidden="true" tabindex="-1"></a>    name</span>
+<span id="cb81-3"><a href="#cb81-3" aria-hidden="true" tabindex="-1"></a>):</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><em>Delete pyskill <code>name</code> module files and dist-info</em></p>
+</section>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/AnswerDotAI\.github\.io\/pyskills");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+<footer class="footer"><div class="nav-footer"><div class="nav-footer-center"><div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/AnswerDotAI/pyskills/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li></ul></div></div></div></footer></body></html>
