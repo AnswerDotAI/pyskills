@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.30
+
+### New Features
+
+- Add folder-local PYSKILLs discovery via `enable_local_skills`; improve doc/xdir rendering of classes, instances and dynamic APIs ([#57](https://github.com/AnswerDotAI/pyskills/issues/57))
+
+
 ## 0.0.29
 
 ### New Features
@@ -15,11 +22,11 @@
 
 - Add `doc_owner` for instances documented by their class ([#55](https://github.com/AnswerDotAI/pyskills/pull/55)), thanks to [@jph00](https://github.com/jph00)
 - Add command-line access to pyskills documentation ([#54](https://github.com/AnswerDotAI/pyskills/pull/54)), thanks to [@jph00](https://github.com/jph00)
-- xdir: plain instances now list their class public API, via new _dynamic helper for detecting custom __dir__ ([#52](https://github.com/AnswerDotAI/pyskills/issues/52))
-- Use signature_ex instead of inspect.signature so params defaulting to Parameter.empty render correctly ([#51](https://github.com/AnswerDotAI/pyskills/issues/51))
-- Fix xdir to detect inherited __dir__ via MRO ([#50](https://github.com/AnswerDotAI/pyskills/issues/50))
-- Make doc and doc_key degrade gracefully when source is unreadable (e.g. stale kernel) instead of raising ([#49](https://github.com/AnswerDotAI/pyskills/issues/49))
-- Add doc_key: emit 4-hex proof-of-sight keys in doc() and complete overview lines for doced() declarations ([#48](https://github.com/AnswerDotAI/pyskills/issues/48))
+- xdir: plain instances now list their class public API, via new `_dynamic` helper for detecting custom `__dir__` ([#52](https://github.com/AnswerDotAI/pyskills/issues/52))
+- Use `signature_ex` instead of inspect.signature so params defaulting to Parameter.empty render correctly ([#51](https://github.com/AnswerDotAI/pyskills/issues/51))
+- Fix xdir to detect inherited `__dir__` via MRO ([#50](https://github.com/AnswerDotAI/pyskills/issues/50))
+- Make doc and `doc_key` degrade gracefully when source is unreadable (e.g. stale kernel) instead of raising ([#49](https://github.com/AnswerDotAI/pyskills/issues/49))
+- Add `doc_key`: emit 4-hex proof-of-sight keys in doc() and complete overview lines for doced() declarations ([#48](https://github.com/AnswerDotAI/pyskills/issues/48))
 
 
 ## 0.0.27
