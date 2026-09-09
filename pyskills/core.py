@@ -1,66 +1,96 @@
 """Skill discovery, LLM-friendly doc rendering, the allow registry, and pyskill registration
 
-A plugin system allowing Python packages to register "skills" — units of LLM-usable functionality — via standard Python entry points. An LLM harness (e.g. solveit) discovers available pyskills without importing them, reads lightweight descriptions via AST inspection, and selectively loads chosen pyskills into context.
+A pyskill is a Python module that gives an LLM instructions or functions to use. Packages register these modules through Python entry points. A host such as Solveit first shows the LLM a catalogue of short descriptions. It reads those descriptions from source without loading the skill. The LLM then chooses which modules to import and read in full.
 
-```python
-def list_pyskills() -> dict[str, str]
-```
-Returns `{name: description}` for all registered pyskills, using `find_spec` + AST parsing — no imports.
+`list_pyskills()` returns a dictionary of module paths and descriptions. It locates each source file with `find_spec_noimport` and reads its docstring with Python's AST parser.
+
+After choosing a skill, import it and read its documentation:
 
 ```python
 import mypackage.skill
+doc(mypackage.skill)       # Overview of classes, functions, and submodules
+doc(SomeClass)            # Bases, constructor, methods, and properties
+doc(some_func)            # Full signature and parameter docments
+xdir(mypackage.skill)     # Public names
 ```
-Standard python native import
 
-```python
-doc(mypackage.skill)       # module overview: classes, functions, submodules
-doc(SomeClass)             # class detail: bases, __init__, methods, properties
-doc(some_func)             # function detail: full signature with docments
-xdir(mypackage.skill)      # filtered names for public symbols
-```
-Inspect at increasing detail — works on any Python module, not just pyskills.
+These inspection functions work on any Python module, not just pyskills.
 
-`allow` registers trusted callables in `__pytools__`. Pass functions, `{cls: ['method']}` dicts (`...` for all public methods), or callable instances. An object defining `__allow__` delegates registration to the items it returns. Registration emits a `pyskills.allow` audit event. A sandbox can reject this event to prevent sandboxed code from broadening its own permissions. Without that enforcement, registration proceeds.
+Use `allow` to register trusted functions, class methods, or callable instances in `__pytools__`. A dictionary such as `{cls: ['method']}` selects methods by name. Use `...` to select all public methods. A group object can return its operations from `__allow__`.
 
-`xdir` returns public names for a module, class, or instance. Modules respect `__all__`. Without it, they list their own definitions and sibling submodules, excluding imports from unrelated packages. Explicitly imported sibling submodules are included in either case. Classes list `__init__` and public methods. Instances with a custom `__dir__` list their dynamic surface. Plain instances list their class's API. Pass `q` to filter the names with a case-insensitive regex.
+Registration is a permission request, not sandbox enforcement. `allow` emits a `pyskills.allow` audit event before making changes. A sandbox must reject that event if untrusted code tries to expand its permissions. Without an audit handler that rejects the event, registration proceeds.
 
-A trailing `…` on an overview line marks omitted docments or a docstring beyond its first line. Read `doc(callable)` for the full operation documentation before using it. Class and namespace views list members without evaluating properties. Custom `_repr_markdown_` views take precedence, including generated API documentation and data-oriented result displays.
+Use `xdir` to find public names before asking for their documentation. For a module, it uses `__all__` when present. Otherwise it lists the module's own definitions and sibling submodules, excluding imports from unrelated packages. It also includes explicitly imported sibling submodules in either case.
 
-A module with a very large API surface can set `__pyskill_sigs__ = False` to elide the types/functions listing from its `doc()` output: its docstring is then the whole answer, with one line noting the elision. Pass `all=True` to `doc` to list the elided symbols anyway.
+For a class, it lists public members and a non-default constructor. A plain instance uses its class's listing. An instance with a custom `__dir__` supplies its dynamic names instead. Pass `q` to filter the list with a case-insensitive regular expression.
 
-A *package* with a substantive docstring — more than the default summary line plus docs link — is treated as curated, so `doc()` elides its mechanical submodule listing too: a curated package docstring, like the ones nbdev generates from a project's notebooks, already says which modules matter. `all=True` restores the listing:
+An overview line ending in `…` has more documentation than it shows. Read `doc(callable)` before using that operation to see its parameter docments and remaining docstring.
 
-Pyskills can be added as standard modules with pyproject entrypoints. But for convenience, they can also be added to a custom pyskills XDG directory, which is automatically added to sys.path.
+Class and namespace overviews inspect properties without evaluating them. An object's custom `_repr_markdown_` supplies its own display, including generated API documentation or a data-oriented result view.
 
-A host can call `enable_local_skills(folder)` once when a dialog opens. Public top-level `.py` modules and packages in `folder/PYSKILLs/` and its ancestors become importable and supply `pyskills` entry points. Packages use `__init__.py`; their other modules are ordinary implementation modules. Leading-underscore names are private. The nearest local folder wins. Existing importable names outside these folders cause an explicit conflict rather than being shadowed.
+Set `__pyskill_sigs__ = False` when a module's type and function listings are too large for its overview. `doc()` keeps the docstring and reports how many entries it omitted. Pass `all=True` to include those entries.
 
-The opening folder stays fixed even after `chdir`. Discovery rescans its ancestor locations for new files without importing them or writing distribution metadata. Ordinary imports still cache modules. Repeating activation for the same folder returns the existing finder; a different folder requires a fresh kernel.
+A package docstring can explain which submodules a reader needs, as nbdev's generated package documentation does. When the cleaned docstring has more than three lines, `doc()` hides the automatic submodule list. A default summary and documentation link do not meet that threshold. Pass `all=True` to show the list.
+
+You don't need to build a package to add a personal pyskill. Put its module in the user pyskills directory under XDG data home. Pyskills adds that directory to `sys.path`. Package entry points remain an option for skills you distribute with a library.
+
+Call `enable_local_skills(folder)` when opening a dialog to find skills near that folder. It searches `PYSKILLs/` in the opening folder and each ancestor. Public top-level `.py` files and packages supply skill entry points. A package uses its `__init__.py` as the skill module. Its other modules remain ordinary implementation modules. Names starting with an underscore are private.
+
+The nearest folder wins when local folders contain the same name. A name that conflicts with an import outside those folders raises an error instead of replacing that import.
+
+The opening folder stays fixed after `chdir`. Discovery rescans those locations for new files without executing skill code or writing metadata files. Imports still use Python's module cache. Repeating activation for the same folder returns the existing finder. Use a fresh kernel to activate a different folder.
 
 Docs: https://AnswerDotAI.github.io/pyskills/core.html.md"""
 
 # AUTOGENERATED! DO NOT EDIT! File to edit: ../nbs/00_core.ipynb.
 
 # %% auto #0
-__all__ = ['ep_desc', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosAllowPolicy', 'PathWritePolicy', 'OpenWritePolicy',
-           'SymbolNotFound', 'resolve', 'xdir', 'doc', 'fmt_sig', 'docfind', 'pyskills_dir', 'ensure_pyskills_dir',
-           'clear_mod', 'enable_pyskill', 'register_pyskill', 'disable_pyskill', 'delete_pyskill',
-           'enable_local_skills', '__pytools__']
+__all__ = ['find_spec_noimport', 'ep_desc', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosAllowPolicy',
+           'PathWritePolicy', 'OpenWritePolicy', 'SymbolNotFound', 'resolve', 'xdir', 'doc', 'fmt_sig', 'docfind',
+           'pyskills_dir', 'ensure_pyskills_dir', 'clear_mod', 'enable_pyskill', 'register_pyskill', 'disable_pyskill',
+           'delete_pyskill', 'enable_local_skills', '__pytools__']
 
 # %% ../nbs/00_core.ipynb #38e384dc
 from fastcore.utils import *
 from fastcore.docments import MarkdownRenderer,can_render,docments,docstring,ann_parts
 from fastcore.xdg import *
 from importlib.metadata import entry_points
+from importlib.machinery import ModuleSpec
+from pkgutil import get_importer
 import builtins, importlib.util, types, inspect, collections, ast, site, shutil, sys, typing, textwrap
 from fastaudit.core import track_call
 
 # %% ../nbs/00_core.ipynb #3ec024c7
 from fastcore.basics import _clsmethod
 
+# %% ../nbs/00_core.ipynb #9601d87c
+def _find_child_spec(name, paths):
+    locations = []
+    for path in paths:
+        finder = get_importer(path)
+        if finder is None or (spec := finder.find_spec(name)) is None: continue
+        if spec.loader is not None: return spec
+        locations.extend(spec.submodule_search_locations or [])
+    if locations:
+        spec = ModuleSpec(name, None, is_package=True)
+        spec.submodule_search_locations = locations
+        return spec
+
+def find_spec_noimport(name:str):
+    "Find the spec for an absolute module name without importing its parents"
+    root, *parts = name.split('.')
+    spec = importlib.util.find_spec(root)
+    for part in parts:
+        if spec is None or not spec.submodule_search_locations: return None
+        root += '.' + part
+        spec = _find_child_spec(root, spec.submodule_search_locations)
+    return spec
+
+
 # %% ../nbs/00_core.ipynb #6dda45ba
 def ep_desc(ep):
     "First paragraph of docstring for entry point `ep`, without importing it"
-    try: spec = importlib.util.find_spec(ep.value.split(':')[0])
+    try: spec = find_spec_noimport(ep.value.split(':')[0])
     except: return
     if not spec or not spec.origin: return None
     tree = ast.parse(Path(spec.origin).read_text())
@@ -136,6 +166,7 @@ def allow(*c, allow_policy=None): # Callable that raises if call not allowed
 
 # %% ../nbs/00_core.ipynb #a3124a91
 def chk_dest(p, ok_dests):
+    if ok_dests is None: return
     resolved = str(Path(p).expanduser().resolve())
     if not any(resolved == (rd := str(Path(d).expanduser().resolve())) or resolved.startswith(rd + '/') for d in ok_dests):
         raise PermissionError(f"Dest '{p}' not allowed; permitted: {ok_dests}")
