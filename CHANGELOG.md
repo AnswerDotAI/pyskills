@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.31
+
+### New Features
+
+- Add `find_spec_noimport` for parent-free module lookup, use it in `ep_desc`, allow None `ok_dests` in `chk_dest` ([#58](https://github.com/AnswerDotAI/pyskills/issues/58))
+
+
 ## 0.0.30
 
 ### New Features
