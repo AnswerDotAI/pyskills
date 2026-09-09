@@ -97,7 +97,7 @@ doc(pyskills.skill.skill_test_func)
         x:int=0, # the input
     )->str: # the output"""A test function"""
 
-For a **class**, [`doc`](https://AnswerDotAI.github.io/pyskills/core.html#doc) shows the class hierarchy, docstring, `__init__` signature, and all public methods with their first docstring line:
+For a class, [`doc`](https://AnswerDotAI.github.io/pyskills/core.html#doc) shows its hierarchy, docstring, full constructor documentation, and a method overview. Read a selected bound method separately for its full docments and usage notes. For dynamic APIs, use `doc(instance)` and `xdir(instance)` to discover the generated or session-bound surface:
 
 ``` python
 doc(pyskills.skill.SkillTestClass)
@@ -211,7 +211,11 @@ The key is an arbitrary name; the value is the module path. After installing the
 
 For full details on creating pyskills, including allow policies for write-guarded operations, see `doc(createskill)` after importing it as shown above.
 
-### Local pyskills without packaging
+### Folder-local skills
+
+Hosts call `enable_local_skills(opening_folder)` once to expose public modules and packages from ancestor `PYSKILLs/` directories. Local skills need a module docstring but no install or entry-point declaration. The standard entry-point API discovers them, and ordinary Python imports load them. The nearest local folder wins; conflicts with existing importable names raise an error. The scope stays fixed across cwd changes. Solveit’s dialoghelper bootstrap activates this automatically.
+
+### User-wide skills without packaging
 
 The entry point approach above requires installing a package. But sometimes you want to create pyskills quickly without a full package: personal utility pyskills, or pyskills shared across multiple projects that each use isolated environments (like [uv](https://docs.astral.sh/uv/) venvs).
 

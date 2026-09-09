@@ -20,17 +20,21 @@ xdir(mypackage.skill)      # filtered names for public symbols
 ```
 Inspect at increasing detail — works on any Python module, not just pyskills.
 
-`allow` registers the callables a pyskill trusts to perform side-effecting operations under a sandbox (e.g. safepyrun): pass functions, `{cls: ['method']}` dicts (`...` for all public methods), or callable instances, and they land in the `__pytools__` registry; an object defining `__allow__` delegates registration to the items it returns. Outside a sandbox `allow` is a no-op, and inside one, sandboxed code can't broaden its own permissions, since `allow` itself raises an audit event.
+`allow` registers trusted callables in `__pytools__`. Pass functions, `{cls: ['method']}` dicts (`...` for all public methods), or callable instances. An object defining `__allow__` delegates registration to the items it returns. Registration emits a `pyskills.allow` audit event. A sandbox can reject this event to prevent sandboxed code from broadening its own permissions. Without that enforcement, registration proceeds.
 
-`xdir` returns public names for a module, class, or instance. Modules respect `__all__` and include explicitly imported sibling submodules; classes include `__init__` and public methods; instances with a custom `__dir__` list their dynamic surface, and plain instances list their class's API. Pass `q` to filter the names with a case-insensitive regex.
+`xdir` returns public names for a module, class, or instance. Modules respect `__all__`. Without it, they list their own definitions and sibling submodules, excluding imports from unrelated packages. Explicitly imported sibling submodules are included in either case. Classes list `__init__` and public methods. Instances with a custom `__dir__` list their dynamic surface. Plain instances list their class's API. Pass `q` to filter the names with a case-insensitive regex.
+
+A trailing `…` on an overview line marks omitted docments or a docstring beyond its first line. Read `doc(callable)` for the full operation documentation before using it. Class and namespace views list members without evaluating properties. Custom `_repr_markdown_` views take precedence, including generated API documentation and data-oriented result displays.
 
 A module with a very large API surface can set `__pyskill_sigs__ = False` to elide the types/functions listing from its `doc()` output: its docstring is then the whole answer, with one line noting the elision. Pass `all=True` to `doc` to list the elided symbols anyway.
 
 A *package* with a substantive docstring — more than the default summary line plus docs link — is treated as curated, so `doc()` elides its mechanical submodule listing too: a curated package docstring, like the ones nbdev generates from a project's notebooks, already says which modules matter. `all=True` restores the listing:
 
-A trailing `…` on an overview function line marks elided detail: the function has docments, or a docstring beyond its first line, so `doc(func)` will show more than the overview line did. A complete overview line instead ends with its bracketed doc key: the line already shows everything `doc(func)` would, so the key can be declared straight from the summary.
-
 Pyskills can be added as standard modules with pyproject entrypoints. But for convenience, they can also be added to a custom pyskills XDG directory, which is automatically added to sys.path.
+
+A host can call `enable_local_skills(folder)` once when a dialog opens. Public top-level `.py` modules and packages in `folder/PYSKILLs/` and its ancestors become importable and supply `pyskills` entry points. Packages use `__init__.py`; their other modules are ordinary implementation modules. Leading-underscore names are private. The nearest local folder wins. Existing importable names outside these folders cause an explicit conflict rather than being shadowed.
+
+The opening folder stays fixed even after `chdir`. Discovery rescans its ancestor locations for new files without importing them or writing distribution metadata. Ordinary imports still cache modules. Repeating activation for the same folder returns the existing finder; a different folder requires a fresh kernel.
 
 Docs: https://AnswerDotAI.github.io/pyskills/core.html.md"""
 
@@ -39,15 +43,19 @@ Docs: https://AnswerDotAI.github.io/pyskills/core.html.md"""
 # %% auto #0
 __all__ = ['ep_desc', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosAllowPolicy', 'PathWritePolicy', 'OpenWritePolicy',
            'SymbolNotFound', 'resolve', 'xdir', 'doc', 'fmt_sig', 'docfind', 'pyskills_dir', 'ensure_pyskills_dir',
-           'clear_mod', 'enable_pyskill', 'register_pyskill', 'disable_pyskill', 'delete_pyskill', '__pytools__']
+           'clear_mod', 'enable_pyskill', 'register_pyskill', 'disable_pyskill', 'delete_pyskill',
+           'enable_local_skills', '__pytools__']
 
 # %% ../nbs/00_core.ipynb #38e384dc
 from fastcore.utils import *
-from fastcore.docments import MarkdownRenderer,can_render,docments
+from fastcore.docments import MarkdownRenderer,can_render,docments,docstring,ann_parts
 from fastcore.xdg import *
 from importlib.metadata import entry_points
-import builtins, importlib.util, types, inspect, collections, ast, site, shutil, sys, typing
+import builtins, importlib.util, types, inspect, collections, ast, site, shutil, sys, typing, textwrap
 from fastaudit.core import track_call
+
+# %% ../nbs/00_core.ipynb #3ec024c7
+from fastcore.basics import _clsmethod
 
 # %% ../nbs/00_core.ipynb #6dda45ba
 def ep_desc(ep):
@@ -71,7 +79,6 @@ def list_pyskills():
 # %% ../nbs/00_core.ipynb #3c64526e
 _all_ = ['__pytools__']
 
-# %% ../nbs/00_core.ipynb #4e2a5e01
 __pytools__ = collections.defaultdict(set)
 
 def _set_wrapped(o, name, f=None):
@@ -146,6 +153,7 @@ class PosAllowPolicy(AllowPolicy):
         if isinstance(p, bytes): p = os.fsdecode(p)
         if isinstance(p, (str, os.PathLike)): chk_dest(p, data['ok_dests'])
 
+# %% ../nbs/00_core.ipynb #798a382c
 class PathWritePolicy(AllowPolicy):
     "Check resolved Path self, optionally also target args"
     def __init__(self, target_pos=None, target_kw=None): store_attr()
@@ -155,12 +163,12 @@ class PathWritePolicy(AllowPolicy):
         if self.target_pos is not None and self.target_pos < len(args): chk_dest(args[self.target_pos], ok)
         if self.target_kw and self.target_kw in kwargs: chk_dest(kwargs[self.target_kw], ok)
 
+# %% ../nbs/00_core.ipynb #d5e5b500
 class OpenWritePolicy(AllowPolicy):
     "Check open() only when mode is writable"
     def __call__(self, obj, args, kwargs, data):
         mode = kwargs.get('mode', args[1] if len(args) > 1 else 'r')
         if any(c in mode for c in 'wax+'): chk_dest(args[0] if args else kwargs.get('file'), data['ok_dests'])
-
 
 # %% ../nbs/00_core.ipynb #533a79ab
 class SymbolNotFound(Exception):
@@ -184,14 +192,6 @@ def resolve(
         else: obj = getattr(obj, name)
         if idx is not None: obj = obj[int(idx)]
     return obj
-
-# %% ../nbs/00_core.ipynb #c21d33bf
-def _is_own(sym, n):
-    "Whether name `n` in module `sym` is an owned symbol or sibling submodule"
-    m = getattr(sym, n, None)
-    if m is None: return False
-    if getattr(m, '__module__', None) == sym.__name__: return True
-    return isinstance(m, types.ModuleType) and m.__name__.split('.')[0] == sym.__name__.split('.')[0]
 
 # %% ../nbs/00_core.ipynb #67114fc7
 def _imported_submods(sym):
@@ -222,32 +222,41 @@ def _dynamic(sym):
     "Does `sym`'s type define a custom `__dir__` (a dynamic API surface)?"
     return any('__dir__' in c.__dict__ for c in type(sym).__mro__[:-1])
 
-def _xdir(sym):
-    "Filtered (name, obj) pairs for public symbols of a module or class (or anything with `__dir__`)"
+def _xnames(sym):
     if isinstance(sym, types.ModuleType):
         names = getattr(sym, '__all__', None)
         if names is None: names = [n for n in sorted(dir(sym)) if not n.startswith('_') and _is_own(sym, n)]
-        res = [(n, getattr(sym, n)) for n in names if getattr(sym, n, None) is not None]
-        subs = _imported_submods(sym)
-        return res + [(n, m) for n,m in sorted(subs.items()) if n not in dict(res)]
+        return list(dict.fromkeys([*names, *_imported_submods(sym)]))
     if isinstance(sym, type):
-        res = []
-        init = getattr(sym, '__init__', None)
-        if init and init is not object.__init__: res.append(('__init__', init))
-        return res + [(n, v) for n,v in sorted(sym.__dict__.items()) if not n.startswith('_')]
-    if not _dynamic(sym): return []
-    return [(n, getattr(sym, n, None)) for n in sorted(dir(sym)) if not n.startswith('_')]
+        names = [n for n in sorted(vars(sym)) if not n.startswith('_')]
+        if getattr(sym, '__init__', object.__init__) is not object.__init__: names.insert(0, '__init__')
+        return names
+    if not _dynamic(sym): return _xnames(type(sym))
+    return sorted({n for n in dir(sym) if not n.startswith('_')})
 
 @allow
 def xdir(
     sym:str|object, # Module, class, or instance to inspect
     q:str=None # Optional case-insensitive regex over names
 ):
-    "Filtered names for public symbols of a module, class, or instance (a plain instance lists its class)"
+    "Public names without evaluating instance properties; a plain instance lists its class's names"
     if isinstance(sym, str): sym = resolve(sym)
-    if not isinstance(sym, (types.ModuleType, type)) and not _dynamic(sym): sym = type(sym)
-    res = [o for o,_ in _xdir(sym)]
-    return [o for o in res if re.search(q, o, re.I)] if q else res
+    names = _xnames(sym)
+    return [n for n in names if re.search(q, n, re.I)] if q else names
+
+# %% ../nbs/00_core.ipynb #058d53d8
+def _member(sym, name):
+    raw = inspect.getattr_static(sym, name, None)
+    if inspect.isdatadescriptor(raw): return raw
+    return getattr(sym, name)
+
+def _xdir(sym):
+    "Public members, retaining data descriptors without evaluating them"
+    if isinstance(sym, types.ModuleType):
+        subs = _imported_submods(sym)
+        return [(n, subs[n] if n in subs else getattr(sym, n)) for n in _xnames(sym)]
+    if isinstance(sym, type): return [(n, inspect.getattr_static(sym, n)) for n in _xnames(sym)]
+    return [(n, _member(sym, n)) for n in _xnames(sym)]
 
 # %% ../nbs/00_core.ipynb #15e66852
 def _doc1(sym, all=False):
@@ -256,24 +265,21 @@ def _doc1(sym, all=False):
     try:
         if isinstance(sym, type) and getattr(sym, '__name__', ''): return PrettyString(_doc_class(sym))
         if hasattr(sym, '_repr_markdown_'): return PrettyString(sym._repr_markdown_())
+        if _dynamic(sym): return _doc_instance(sym, _xdir(sym))
         if callable(sym) and can_render(sym): return PrettyString(MarkdownRenderer(sym))
-    except Exception as e:
-        ds = inspect.cleandoc(getattr(sym, '__doc__', None) or '')
-        return PrettyString(f'{ds}\n(doc render failed: {type(e).__name__}: {e}; stale kernel? try a restart)'.strip())
-    if (items := _xdir(sym)): return _doc_instance(sym, items)
+    except Exception as e: return PrettyString(f'{docstring(sym)}\n(doc render failed: {type(e).__name__}: {e})'.strip())
     if '__str__' in type(sym).__dict__: return str(sym)
     if '__repr__' in type(sym).__dict__: return repr(sym)
     return PrettyString(MarkdownRenderer(sym))
 
 @allow
 def doc(
-    sym:str|object,   # Object (or dotted name) to document
+    sym:str|object,   # Object (or dotted name) to document; use the instance for a generated or bound API
     *syms:str|object,  # More objects: each doc appended as its own blank-line-separated section
     all:bool=False    # Show symbol listings elided by `__pyskill_sigs__=False`?
 )->str:
-    "Docstring of modules, classes, functions, instances or any other Python objects."
+    "Full callable documentation or a module/class/namespace overview; custom Markdown displays are preserved"
     return PrettyString('\n\n'.join(str(_doc1(s, all)) for s in (sym, *syms)))
-
 
 # %% ../nbs/00_core.ipynb #90aae7aa
 class _N:
@@ -282,6 +288,7 @@ class _N:
 
 def _fmt_ann(a):
     if a is inspect._empty: return a
+    a = ann_parts(a)[0]
     if isinstance(a, type): return a.__name__
     o,args = typing.get_origin(a),typing.get_args(a)
     if o is None: return getattr(a, '__name__', None) or str(a)
@@ -291,31 +298,12 @@ def _fmt_ann(a):
 
 def _ann(a): return _N(_fmt_ann(a)) if a is not inspect._empty else a
 
+# %% ../nbs/00_core.ipynb #3669a5e6
 def fmt_sig(f, ps=None):
     try: s = signature_ex(f)
     except (ValueError, TypeError): return '(...)'
     ps = [p.replace(annotation=_ann(p.annotation)) for p in (s.parameters.values() if ps is None else ps)]
     return str(s.replace(parameters=ps, return_annotation=_ann(s.return_annotation)))
-
-# %% ../nbs/00_core.ipynb #ae0c509a
-def _fmt_method(name, method, prefix=''):
-    sig = fmt_sig(method)
-    d = getattr(method, '__doc__', None)
-    res = f'    {prefix}def {name}{sig}: ...'
-    if d and name != '__init__': res += f'  # {d.splitlines()[0].strip()}'
-    return res
-
-def _doc_class(sym):
-    bases = ','.join(b.__name__ for b in sym.__mro__[1:-1]) if sym.__mro__[1:-1] else ''
-    parts = [f'class {sym.__name__}({bases}):' if bases else f'class {sym.__name__}:']
-    for name,raw in _xdir(sym):
-        if isinstance(raw, property): parts.append(_fmt_method(name, raw.fget, '@property\n    '))
-        elif isinstance(raw, classmethod): parts.append(_fmt_method(name, raw.__func__, '@classmethod\n    '))
-        elif isinstance(raw, staticmethod): parts.append(_fmt_method(name, raw.__func__, '@staticmethod\n    '))
-        elif callable(raw): parts.append(_fmt_method(name, raw))
-    d = sym.__doc__ or (getattr(sym, '__init__', None) and sym.__init__.__doc__)
-    if d: parts.insert(1, '    """' + inspect.cleandoc(d).replace('\n', '\n    ') + '"""')
-    return PrettyString(parts[0] + '\n' + '\n'.join(parts[1:]))
 
 # %% ../nbs/00_core.ipynb #b2b29e28
 def _elided(obj, d):
@@ -324,15 +312,38 @@ def _elided(obj, d):
     try: return any(v is not None for v in docments(obj).values())
     except Exception: return False
 
+def _fmt_method(name, method, prefix=''):
+    sig = fmt_sig(method)
+    d = docstring(method).splitlines()
+    pre = 'async def' if is_async_callable(method) else 'def'
+    res = f'    {prefix}{pre} {name}{sig}: ...'
+    if d and name != '__init__': res += f'  # {d[0].strip()}'
+    if _elided(method, d): res += '…'
+    return res
+
+def _doc_class(sym):
+    bases = ','.join(b.__name__ for b in sym.__mro__[1:-1]) if sym.__mro__[1:-1] else ''
+    parts = [f'class {sym.__name__}({bases}):' if bases else f'class {sym.__name__}:']
+    for name,raw in _xdir(sym):
+        if isinstance(raw, property): parts.append(_fmt_method(name, raw.fget, '@property\n    '))
+        elif isinstance(raw, (classmethod, _clsmethod)): parts.append(_fmt_method(name, getattr(sym, name), '@classmethod\n    '))
+        elif isinstance(raw, staticmethod): parts.append(_fmt_method(name, raw.__func__, '@staticmethod\n    '))
+        elif name=='__init__' and can_render(raw): parts.append(textwrap.indent(str(MarkdownRenderer(raw)), '    '))
+        elif callable(raw): parts.append(_fmt_method(name, raw))
+    d = inspect.getdoc(sym)
+    if d: parts.insert(1, '    """' + inspect.cleandoc(d).replace('\n', '\n    ') + '"""')
+    if bases: parts.append('\nInherited members: ' + ', '.join(f'`doc({b.__name__})`' for b in sym.__bases__ if b is not object) + '.')
+    parts.append('\nOverview only. Read `doc(Class.member)` for entries marked …; use an instance for dynamically bound members.')
+    return PrettyString('\n'.join(parts))
+
+# %% ../nbs/00_core.ipynb #c10c4f82
 def _doc_module(mod, all=False):
     parts = [f'# module {mod.__name__}:\n']
     if mod.__doc__: parts.append(f'"""{inspect.cleandoc(mod.__doc__)}\n"""')
     groups,refs = getattr(mod, '__pyskill_params__', {}),{}
     typs,funcs,subs = [],[],[]
     for name,obj in _xdir(mod):
-        ds = getattr(obj, '__doc__', None)
-        if not ds and isinstance(obj, type): ds = getattr(getattr(obj, '__init__', None), '__doc__', None)
-        d = (ds or '').splitlines()
+        d = docstring(obj).splitlines()
         comment = f': ...  # {d[0].strip()}' if d and d[0].strip() else ''
         if isinstance(obj, types.ModuleType): subs.append(f'  {name}{comment}')
         elif isinstance(obj, type):
@@ -342,7 +353,7 @@ def _doc_module(mod, all=False):
             base_str = f'({bases})' if bases else ''
             typs.append(f'- class {name}{base_str}{comment}')
         elif callable(obj):
-            pre = 'async def' if inspect.iscoroutinefunction(obj) else 'def'
+            pre = 'async def' if is_async_callable(obj) else 'def'
             if _elided(obj, d): comment = f'{comment}…' if comment else ': …  # …'
             sig = (groups and _grouped_sig(obj, name, groups, refs)) or fmt_sig(obj)
             funcs.append(f'- {pre} {name}{sig}{comment}')
@@ -391,14 +402,16 @@ def _fmt_group(g, name, f, ps):
 # %% ../nbs/00_core.ipynb #ccca39db
 def _doc_instance(sym, items):
     parts = [f'Instance of type {type(sym).__name__}:']
+    if d := docstring(type(sym) if callable(sym) else sym): parts.append(d)
+    if callable(sym): parts.append(_fmt_method('__call__', sym).strip())
     for name,obj in items:
-        ds = (getattr(obj, '__doc__', None) or '').splitlines()
-        comment = f'  # {ds[0].strip()}' if ds and ds[0].strip() else ''
-        if callable(obj):
-            try: sig = str(signature_ex(obj))
-            except (ValueError, TypeError): sig = '(...)'
-            parts.append(f'- {name}{sig}{comment}')
-        else: parts.append(f'- {name}: {type(obj).__name__} = {repr(obj)[:80]}')
+        if isinstance(obj, property): parts.append(_fmt_method(name, obj.fget, '@property\n    ').strip())
+        elif callable(obj) and not _dynamic(obj): parts.append(_fmt_method(name, obj).strip())
+        else:
+            d = docstring(type(obj)).splitlines() if _dynamic(obj) else []
+            comment = f'  # {d[0]}' if d else ''
+            parts.append(f'- {name}: {type(obj).__name__}{comment}')
+    parts.append('\nOverview only. Read `doc(obj.member)` for entries marked …; inspect properties on the class without evaluating them.')
     return PrettyString('\n'.join(parts))
 
 # %% ../nbs/00_core.ipynb #c22af8b2
@@ -488,3 +501,66 @@ def delete_pyskill(name):
     parts = name.split('.')
     mod_file = sd / Path(*parts[:-1]) / f'{parts[-1]}.py' if len(parts) > 1 else sd / f'{parts[-1]}.py'
     if mod_file.exists(): mod_file.unlink()
+
+# %% ../nbs/00_core.ipynb #785498bf
+from importlib.metadata import Distribution, DistributionFinder
+from importlib.machinery import PathFinder
+
+# %% ../nbs/00_core.ipynb #dd1a7b43
+class _LocalSkillDistribution(Distribution):
+    def __init__(self, finder): self.finder = finder
+    def read_text(self, filename):
+        if filename=='METADATA': return 'Name: pyskills-local\nVersion: 0\n'
+        if filename=='entry_points.txt': return '[pyskills]\n' + '\n'.join(f'{n} = {n}' for n in self.finder.sources())
+    def locate_file(self, path): return self.finder.folder/path
+
+class _LocalSkills(DistributionFinder):
+    _pyskills_local = True
+    def __init__(self, folder):
+        self.folder = folder
+        self.roots = [str(p/'PYSKILLs') for p in (folder, *folder.parents)]
+
+    def sources(self):
+        res = {}
+        for root in self.roots:
+            for p in sorted(Path(root).glob('*')):
+                name = p.stem if p.suffix=='.py' else p.name
+                src = p if p.is_file() and p.suffix=='.py' else p/'__init__.py'
+                if name.isidentifier() and not name.startswith('_') and src.is_file(): res.setdefault(name, src)
+        return res
+
+    def check_names(self):
+        for name,src in self.sources().items():
+            spec = importlib.util.find_spec(name)
+            if spec is not None and (not spec.origin or Path(spec.origin).resolve()!=src.resolve()):
+                raise ValueError(f'Local skill {name!r} conflicts with an existing import at {spec.origin!r}')
+
+    def find_spec(self, fullname, path=None, target=None):
+        if path is None and fullname in self.sources(): return PathFinder.find_spec(fullname, self.roots, target)
+
+    def find_distributions(self, context=DistributionFinder.Context()):
+        if context.name and re.sub(r'[-_.]+', '-', context.name).lower()!='pyskills-local': return
+        importlib.invalidate_caches()
+        self.check_names()
+        yield _LocalSkillDistribution(self)
+
+
+# %% ../nbs/00_core.ipynb #762f7eed
+def enable_local_skills(
+    folder:str|Path, # Opening directory whose ancestor PYSKILLs folders supply skills; expands ~ and resolves relative paths
+)->DistributionFinder: # The installed finder; repeated activation for the same directory returns it
+    """Enable folder-local skill imports and entry points for this interpreter.
+
+    Call once at host startup. Later cwd changes do not alter the scope. A different folder after activation raises ValueError; use a new kernel. Local skill names conflicting with other importable modules also raise ValueError. No skill code is executed during activation or discovery, and no metadata files are written.
+    """
+    folder = Path(folder).expanduser().resolve()
+    if not folder.is_dir(): raise NotADirectoryError(folder)
+    for finder in sys.meta_path:
+        if not getattr(finder, '_pyskills_local', False): continue
+        if finder.folder!=folder: raise ValueError(f'Local skills already enabled for {finder.folder}')
+        return finder
+    finder = _LocalSkills(folder)
+    finder.check_names()
+    sys.meta_path.append(finder)
+    importlib.invalidate_caches()
+    return finder

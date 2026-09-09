@@ -1,10 +1,12 @@
 """Pyskills are tool modules that Python packages register so you can find them without importing everything. `list_pyskills()` names the ones installed, with a one-line description each, and needs no imports. Load one with a normal import, then read its docs with `doc()`.
 
-Use `doc()` at increasing detail, module first, then the specific class or function before its first use:
+Use `doc()` at increasing detail: module, class or namespace, then the actual callable before its first use:
 
     import pyskills.skill
     doc(pyskills.skill)                            # module overview: classes, functions, submodules
-    doc(SkillTestClass, skill_test_func)           # symbol detail: full signatures with docments, one section each
+    doc(SkillTestClass, skill_test_func)           # class overview and full function documentation
+
+For generated or bound APIs, inspect the instance: `doc(page)`, `doc(api.group)`, then `doc(page.goto)` or `doc(api.group.operation)`. A class cannot show instance-generated operations or their bound defaults. `doc(Class)` includes constructor documentation and a method overview; methods still need their own read. Inspect properties on the class rather than evaluating a getter to document it.
 
 Normally use `from <module> import *` when loading a pyskill: each pyskill's `__all__` is carefully curated, so a star import brings in exactly the intended API.
 
@@ -12,7 +14,7 @@ Normally use `from <module> import *` when loading a pyskill: each pyskill's `__
 
 Doc the module once while its output is still visible in the conversation, then doc each class or function right before its first call. This is conversation state, not Python-process state: read it again when the earlier output is no longer visible, not merely because the kernel restarted.
 
-In a module overview, a trailing `...` on a line means docments and usage notes exist beyond the signature and first docstring line, and only `doc(func)` shows them: read it before the first call, however complete the line looks. A line with no `...` is that function's whole doc. A `**name` collector (other than `**kwargs` itself) is a shared param group: its params are listed once under `## shared params:` and are passed as ordinary keyword args. `doc` takes several objects at once, each returned as its own section, so batch the reads.
+In an overview, a trailing `…` marks omitted docments or usage notes: read `doc(callable)` before the first call, however complete the summary looks. The literal `...` in a displayed function body is just a placeholder. Custom displays, such as fastspec groups, provide their own drill-down guidance. A `**name` collector (other than `**kwargs` itself) is a shared param group: its params are listed once under `## shared params:` and are passed as ordinary keyword args. `doc` takes several objects at once, so batch the reads.
 
 When more than one pyskill looks like a candidate for a task, `doc()` each candidate rather than guessing from the one-line descriptions: some specialize by input type (e.g. `fastcore.tools` for plain text and files vs `aidialog.dlgskill` for notebooks and dialogs; prefer `exhash.skill` for text editing when it's available) and the short description won't always make the distinction clear.
 
@@ -25,6 +27,8 @@ Results are built to be read as their bare reprs: end the cell with the bare exp
 Summarize what a pyskill's docs or results say rather than dumping the full output verbatim, unless the user actually needs to see all of it.
 
 `doc()` works on *all* python modules, not only pyskills.
+
+Hosts can also expose folder-local skills from ancestor `PYSKILLs/` directories. These appear in the same listing and use ordinary imports. Their scope belongs to the dialog's opening folder, not its changing cwd. The host selects that scope; discovery does not grant tool permissions.
 
 `xdir(sym, q=None)` complements `doc()`: it lists an object's public names, filtered by an optional case-insensitive regex. Use it when a module, class, or dynamic API surface is too big to `doc()` whole, e.g. `xdir(page.emulation, 'viewport')` on a fastcdp CDP domain, then `doc()` the match before calling it.
 

@@ -15,7 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
 ]
-dependencies = ['fastaudit', 'fastcore>=2.2.19']
+dependencies = ['fastaudit', 'fastcore>=2.2.23']
 
 [project.optional-dependencies]
 dev = ['httpx']
