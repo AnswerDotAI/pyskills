@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.33
+
+### New Features
+
+- Rename folder-local skills directory from PYSKILLs to `_pyskills` ([#60](https://github.com/AnswerDotAI/pyskills/issues/60))
+
+
 ## 0.0.32
 
 ### Bugs Squashed
