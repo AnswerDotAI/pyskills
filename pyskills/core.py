@@ -230,7 +230,9 @@ def _imported_submods(sym):
     pkg = sym.__name__.rsplit('.', 1)[0] if '.' in sym.__name__ else None
     if not pkg: return {}
     res = {}
-    for node in ast.walk(ast.parse(inspect.getsource(sym))):
+    try: source = inspect.getsource(sym)
+    except (OSError, TypeError): return {}  # Extension modules have no source to scan.
+    for node in ast.walk(ast.parse(source)):
         if not isinstance(node, ast.Import): continue
         for alias in node.names:
             if alias.name.startswith(pkg + '.') and alias.name != sym.__name__:
@@ -262,6 +264,7 @@ def _xnames(sym):
         names = [n for n in sorted(vars(sym)) if not n.startswith('_')]
         if getattr(sym, '__init__', object.__init__) is not object.__init__: names.insert(0, '__init__')
         return names
+    if isinstance(sym, types.SimpleNamespace): return sorted(n for n in vars(sym) if not n.startswith('_'))
     if not _dynamic(sym): return _xnames(type(sym))
     return sorted({n for n in dir(sym) if not n.startswith('_')})
 
@@ -270,7 +273,7 @@ def xdir(
     sym:str|object, # Module, class, or instance to inspect
     q:str=None # Optional case-insensitive regex over names
 ):
-    "Public names without evaluating instance properties; a plain instance lists its class's names"
+    "Public names without evaluating instance properties; a plain instance lists its class's names, and a `SimpleNamespace` its own"
     if isinstance(sym, str): sym = resolve(sym)
     names = _xnames(sym)
     return [n for n in names if re.search(q, n, re.I)] if q else names
