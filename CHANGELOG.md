@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.32
+
+### Bugs Squashed
+
+- xdir: list SimpleNamespace attrs directly and skip submodule scan when source is unavailable ([#59](https://github.com/AnswerDotAI/pyskills/issues/59))
+
+
 ## 0.0.31
 
 ### New Features
