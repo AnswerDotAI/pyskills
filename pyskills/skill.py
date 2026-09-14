@@ -8,7 +8,7 @@ Use `doc()` at increasing detail: module, class or namespace, then the actual ca
 
 For generated or bound APIs, inspect the instance: `doc(page)`, `doc(api.group)`, then `doc(page.goto)` or `doc(api.group.operation)`. A class cannot show instance-generated operations or their bound defaults. `doc(Class)` includes constructor documentation and a method overview; methods still need their own read. Inspect properties on the class rather than evaluating a getter to document it.
 
-Normally use `from <module> import *` when loading a pyskill: each pyskill's `__all__` is carefully curated, so a star import brings in exactly the intended API.
+Normally load a pyskill with `from <module> import *`. Its `__all__` selects the intended API.
 
 `doc()` returns a `PrettyString`. A bare final call is rendered by IPython; assigning the result is silent. Assign it when you do not want it rendered, for instance for very large docs you want to search through.
 
@@ -16,21 +16,21 @@ Doc the module once while its output is still visible in the conversation, then 
 
 In an overview, a trailing `…` marks omitted docments or usage notes: read `doc(callable)` before the first call, however complete the summary looks. The literal `...` in a displayed function body is just a placeholder. Custom displays, such as fastspec groups, provide their own drill-down guidance. A `**name` collector (other than `**kwargs` itself) is a shared param group: its params are listed once under `## shared params:` and are passed as ordinary keyword args. `doc` takes several objects at once, so batch the reads.
 
-When more than one pyskill looks like a candidate for a task, `doc()` each candidate rather than guessing from the one-line descriptions: some specialize by input type (e.g. `fastcore.tools` for plain text and files vs `aidialog.dlgskill` for notebooks and dialogs; prefer `exhash.skill` for text editing when it's available) and the short description won't always make the distinction clear.
+When several pyskills could handle a task, read `doc()` for each. Their one-line descriptions may not distinguish the inputs they support. For example, use `fastcore.tools` for plain text and files, or `aidialog.dlgskill` for notebooks and dialogs. Prefer `exhash.skill` for text editing when available.
 
-Pyskill results are designed so the right call answers the question directly. Post-processing a result with generic Python (a `split`/`join`/slice/comprehension over its output) is a workaround smell: it usually means the call was wrong or a parameter was missed. Check `doc()` for the parameter or sibling function that answers directly; if it genuinely doesn't exist, propose extending the module rather than bridging with ad hoc code.
+Use the pyskill API to get the result you need instead of post-processing its output. Before using `split`, `join`, slices, or comprehensions, check `doc()` for a parameter or another function that answers directly. If none exists, propose extending the module rather than writing ad hoc code.
 
-The same smell applies on the way in: wrapping an argument in `str()`, `expanduser()`, pre-escaping, or path-joining that the call already handles means either the docments weren't read or the tooling or its docs need fixing. Check the parameter before dressing the argument, and tell the user when the most ergonomic argument handling doesn't exist or isn't documented: improving tooling is always first priority.
+Check the parameter docs before converting arguments with `str()` or `expanduser()`, escaping text, or joining paths. The call may already handle these. Tell the user when convenient argument handling is missing or undocumented. Prioritize improving the tool or its docs over working around the limitation.
 
-Results are built to be read as their bare reprs: end the cell with the bare expression rather than `print(...)`, which flattens a tuned display to plain `str()`. If a bare result ever reads worse than a printed or reformatted version, the repr is deficient: fix it or tell the user, never quietly work around it.
+End the cell with the result as a bare expression. `print(...)` converts the result to a string and loses its custom display. If printing or reformatting would make the result easier to read, fix its repr or tell the user. Don't work around a poor repr silently.
 
 Summarize what a pyskill's docs or results say rather than dumping the full output verbatim, unless the user actually needs to see all of it.
 
 `doc()` works on *all* python modules, not only pyskills.
 
-Hosts can also expose folder-local skills from ancestor `PYSKILLs/` directories. These appear in the same listing and use ordinary imports. Their scope belongs to the dialog's opening folder, not its changing cwd. The host selects that scope; discovery does not grant tool permissions.
+Hosts can also expose folder-local skills from ancestor `_pyskills/` directories. These appear in the same listing and use ordinary imports. Their scope belongs to the dialog's opening folder, not its changing cwd. The host selects that scope; discovery does not grant tool permissions.
 
-`xdir(sym, q=None)` complements `doc()`: it lists an object's public names, filtered by an optional case-insensitive regex. Use it when a module, class, or dynamic API surface is too big to `doc()` whole, e.g. `xdir(page.emulation, 'viewport')` on a fastcdp CDP domain, then `doc()` the match before calling it.
+`xdir(sym, q=None)` lists an object's public names, filtered by an optional case-insensitive regex. Use it when a module, class, or dynamic API is too large to read with `doc()`. For example, `xdir(page.emulation, 'viewport')` finds viewport-related names in a fastcdp CDP domain. Read `doc()` for the matching object before calling it.
 
 `info_md(obj, source=False)` (from `ipykernel_helper`, preloaded by clikernel startup where installed) is the third way to read an object: IPython's `?` -- or `??` with `source=True` -- rendered as markdown. Reach for it when you want an object's real signature, docstring, and source together, rather than `inspect.getsource`/`inspect.signature` or bare `?`/`??`.
 

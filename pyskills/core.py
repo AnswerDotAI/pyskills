@@ -34,7 +34,7 @@ A package docstring can explain which submodules a reader needs, as nbdev's gene
 
 You don't need to build a package to add a personal pyskill. Put its module in the user pyskills directory under XDG data home. Pyskills adds that directory to `sys.path`. Package entry points remain an option for skills you distribute with a library.
 
-Call `enable_local_skills(folder)` when opening a dialog to find skills near that folder. It searches `PYSKILLs/` in the opening folder and each ancestor. Public top-level `.py` files and packages supply skill entry points. A package uses its `__init__.py` as the skill module. Its other modules remain ordinary implementation modules. Names starting with an underscore are private.
+Call `enable_local_skills(folder)` when opening a dialog to find skills near that folder. It searches `_pyskills/` in the opening folder and each ancestor. Public top-level `.py` files and packages supply skill entry points. A package uses its `__init__.py` as the skill module. Its other modules remain ordinary implementation modules. Names starting with an underscore are private.
 
 The nearest folder wins when local folders contain the same name. A name that conflicts with an import outside those folders raises an error instead of replacing that import.
 
@@ -552,7 +552,7 @@ class _LocalSkills(DistributionFinder):
     _pyskills_local = True
     def __init__(self, folder):
         self.folder = folder
-        self.roots = [str(p/'PYSKILLs') for p in (folder, *folder.parents)]
+        self.roots = [str(p/'_pyskills') for p in (folder, *folder.parents)]
 
     def sources(self):
         res = {}
@@ -581,7 +581,7 @@ class _LocalSkills(DistributionFinder):
 
 # %% ../nbs/00_core.ipynb #762f7eed
 def enable_local_skills(
-    folder:str|Path, # Opening directory whose ancestor PYSKILLs folders supply skills; expands ~ and resolves relative paths
+    folder:str|Path, # Opening directory whose ancestor _pyskills folders supply skills; expands ~ and resolves relative paths
 )->DistributionFinder: # The installed finder; repeated activation for the same directory returns it
     """Enable folder-local skill imports and entry points for this interpreter.
 

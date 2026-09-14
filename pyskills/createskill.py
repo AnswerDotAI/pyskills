@@ -70,7 +70,7 @@ After import, the LLM inspects the module with `doc(module)` (overview of classe
 
 ## 6. Folder-local skills
 
-When the host enables folder-local skills, put a public `.py` module or a package with `__init__.py` in `PYSKILLs/` under the dialog's opening folder or one of its ancestors. Each top-level module or package is a skill. Package submodules are implementation modules; leading-underscore names are private. Supply the same module docstring and curated API as an installed skill. No `pyproject.toml`, installation, or manual entry-point registration is needed.
+When the host enables folder-local skills, put a public `.py` module or a package with `__init__.py` in `_pyskills/` under the dialog's opening folder or one of its ancestors. Each top-level module or package is a skill. Package submodules are implementation modules; leading-underscore names are private. Supply the same module docstring and curated API as an installed skill. No `pyproject.toml`, installation, or manual entry-point registration is needed.
 
 The nearest folder wins between local duplicates. Names conflicting with existing importable modules raise an error. Discovery reads docstrings without executing skill code. New files in the selected ancestor locations become discoverable, but imported modules retain normal Python caching.
 

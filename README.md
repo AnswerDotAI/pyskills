@@ -213,7 +213,7 @@ For full details on creating pyskills, including allow policies for write-guarde
 
 ### Folder-local skills
 
-Hosts call `enable_local_skills(opening_folder)` once to expose public modules and packages from ancestor `PYSKILLs/` directories. Local skills need a module docstring but no install or entry-point declaration. The standard entry-point API discovers them, and ordinary Python imports load them. The nearest local folder wins; conflicts with existing importable names raise an error. The scope stays fixed across cwd changes. Solveit’s dialoghelper bootstrap activates this automatically.
+Hosts call `enable_local_skills(opening_folder)` once to expose public modules and packages from ancestor `_pyskills/` directories. Local skills need a module docstring but no install or entry-point declaration. The standard entry-point API discovers them, and ordinary Python imports load them. The nearest local folder wins; conflicts with existing importable names raise an error. The scope stays fixed across cwd changes. Solveit’s dialoghelper bootstrap activates this automatically.
 
 ### User-wide skills without packaging
 

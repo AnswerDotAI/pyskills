@@ -10,7 +10,7 @@ from pyskills.core import enable_local_skills, list_pyskills
 def test_local_skills(tmp_path):
     team = tmp_path
     project = team/'orchard'
-    shared,local = team/'PYSKILLs',project/'PYSKILLs'
+    shared,local = team/'_pyskills',project/'_pyskills'
     shared.mkdir()
     local.mkdir(parents=True)
     (shared/'orchard_tools.py').write_text(r'''"""Team orchard tools."""
