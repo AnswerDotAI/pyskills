@@ -311,7 +311,7 @@ def doc(
     sym:str|object,   # Object (or dotted name) to document; use the instance for a generated or bound API
     *syms:str|object,  # More objects: each doc appended as its own blank-line-separated section
     all:bool=False    # Show symbol listings elided by `__pyskill_sigs__=False`?
-)->str:
+)->str: # A `PrettyString`: IPython renders a bare final call; assign it to skip rendering
     "Full callable documentation or a module/class/namespace overview; custom Markdown displays are preserved"
     return PrettyString('\n\n'.join(str(_doc1(s, all)) for s in (sym, *syms)))
 
@@ -511,7 +511,7 @@ def enable_pyskill(name):
     clear_mod(name.split('.')[0])
 
 def register_pyskill(name, docstr, code=''):
-    "Register a pyskill module `name` in the xdg pyskills dir"
+    "Write pyskill module `name` (docstring `docstr`, body `code`) to the xdg pyskills dir, and create its dist-info entry point so `list_pyskills()` shows it at once"
     sd = pyskills_dir()
     parts = name.split('.')
     mod_dir = sd / Path(*parts[:-1]) if len(parts) > 1 else sd

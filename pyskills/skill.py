@@ -1,40 +1,32 @@
 """Pyskills are tool modules that Python packages register so you can find them without importing everything. `list_pyskills()` names the ones installed, with a one-line description each, and needs no imports. Load one with a normal import, then read its docs with `doc()`.
 
-Use `doc()` at increasing detail: module, class or namespace, then the actual callable before its first use:
+# Finding skills
+
+Normally load with `from <module> import *`: `__all__` selects the intended API. Hosts can also expose folder-local skills from `_pyskills/` dirs in the dialog's opening folder and its ancestors; they appear in the same listing and import normally. Their scope follows the opening folder, not a later cwd change; the host selects it, and discovery grants no tool permissions.
+
+When several pyskills could fit, read `doc()` for each: one-line descriptions may not show which inputs they support (e.g. `fastcore.tools` for plain text/files, `aidialog.dlgskill` for notebooks/dialogs). Prefer `exhash.skill` for text editing when available. To build and register your own: `from pyskills import createskill; doc(createskill)`.
+
+# Reading docs
+
+You MUST read the full `doc()` of each function, class, method, and magic before its first use, unless that doc is already visible in the conversation. A trailing `…` on an overview row marks omitted docments or usage notes. A row without it is the full doc. For a magic, doc the function that implements it, as named in its skill's docs. You MUST re-read any doc, module overviews included, when its earlier output is no longer visible. A kernel restart alone is no reason to re-read.
+
+`doc()` works on any module, not just pyskills. Read at increasing detail: module, then class or namespace, then each callable. Pass several objects to one `doc()` call:
 
     import pyskills.skill
     doc(pyskills.skill)                            # module overview: classes, functions, submodules
     doc(SkillTestClass, skill_test_func)           # class overview and full function documentation
 
-For generated or bound APIs, inspect the instance: `doc(page)`, `doc(api.group)`, then `doc(page.goto)` or `doc(api.group.operation)`. A class cannot show instance-generated operations or their bound defaults. `doc(Class)` includes constructor documentation and a method overview; methods still need their own read. Inspect properties on the class rather than evaluating a getter to document it.
+`doc(Class)` gives constructor docs plus a method overview. For generated or bound APIs, doc the instance (`doc(page)`, `doc(api.group)`, then `doc(page.goto)`/`doc(api.group.operation)`). A class can't show per-instance operations or their bound defaults. Doc properties on the class rather than evaluating the getter.
 
-Normally load a pyskill with `from <module> import *`. Its `__all__` selects the intended API.
+A literal `...` in a displayed body is a placeholder. A `**name` collector other than `**kwargs` is a shared param group: its params are listed once under `## shared params:` and passed as ordinary keyword args. Custom displays (e.g. fastspec groups) give their own drill-down guidance.
 
-`doc()` returns a `PrettyString`. A bare final call is rendered by IPython; assigning the result is silent. Assign it when you do not want it rendered, for instance for very large docs you want to search through.
+For APIs too large for `doc()`, `xdir(sym, q=None)` lists public names, filtered by an optional case-insensitive regex (e.g. `xdir(page.emulation, 'viewport')` for a fastcdp CDP domain's viewport names); `doc()` the match before calling it. `info_md(obj, source=False)` (from `ipykernel_helper`, preloaded by clikernel startup where installed) renders IPython's `?` (`??` with `source=True`) as markdown: use it for an object's real signature, docstring, and source together, not `inspect.getsource`/`inspect.signature`/bare `?`/`??`.
 
-Doc the module once while its output is still visible in the conversation, then doc each class or function right before its first call. This is conversation state, not Python-process state: read it again when the earlier output is no longer visible, not merely because the kernel restarted.
+# Using results
 
-In an overview, a trailing `…` marks omitted docments or usage notes: read `doc(callable)` before the first call, however complete the summary looks. The literal `...` in a displayed function body is just a placeholder. Custom displays, such as fastspec groups, provide their own drill-down guidance. A `**name` collector (other than `**kwargs` itself) is a shared param group: its params are listed once under `## shared params:` and are passed as ordinary keyword args. `doc` takes several objects at once, so batch the reads.
+Get the result you need from the API rather than post-processing its output: before `split`, `join`, slices, or comprehensions, check `doc()` for a parameter or function that answers directly; if none exists, propose extending the module rather than writing ad hoc code. Check parameter docs before converting arguments with `str()`/`expanduser()`, escaping text, or joining paths: the call may already handle them. Tell the user when convenient argument handling is missing or undocumented; improving the tool or its docs comes before working around it.
 
-When several pyskills could handle a task, read `doc()` for each. Their one-line descriptions may not distinguish the inputs they support. For example, use `fastcore.tools` for plain text and files, or `aidialog.dlgskill` for notebooks and dialogs. Prefer `exhash.skill` for text editing when available.
-
-Use the pyskill API to get the result you need instead of post-processing its output. Before using `split`, `join`, slices, or comprehensions, check `doc()` for a parameter or another function that answers directly. If none exists, propose extending the module rather than writing ad hoc code.
-
-Check the parameter docs before converting arguments with `str()` or `expanduser()`, escaping text, or joining paths. The call may already handle these. Tell the user when convenient argument handling is missing or undocumented. Prioritize improving the tool or its docs over working around the limitation.
-
-End the cell with the result as a bare expression. `print(...)` converts the result to a string and loses its custom display. If printing or reformatting would make the result easier to read, fix its repr or tell the user. Don't work around a poor repr silently.
-
-Summarize what a pyskill's docs or results say rather than dumping the full output verbatim, unless the user actually needs to see all of it.
-
-`doc()` works on *all* python modules, not only pyskills.
-
-Hosts can also expose folder-local skills from ancestor `_pyskills/` directories. These appear in the same listing and use ordinary imports. Their scope belongs to the dialog's opening folder, not its changing cwd. The host selects that scope; discovery does not grant tool permissions.
-
-`xdir(sym, q=None)` lists an object's public names, filtered by an optional case-insensitive regex. Use it when a module, class, or dynamic API is too large to read with `doc()`. For example, `xdir(page.emulation, 'viewport')` finds viewport-related names in a fastcdp CDP domain. Read `doc()` for the matching object before calling it.
-
-`info_md(obj, source=False)` (from `ipykernel_helper`, preloaded by clikernel startup where installed) is the third way to read an object: IPython's `?` -- or `??` with `source=True` -- rendered as markdown. Reach for it when you want an object's real signature, docstring, and source together, rather than `inspect.getsource`/`inspect.signature` or bare `?`/`??`.
-
-`from pyskills import createskill; doc(createskill)` for how to build and register your own pyskill modules.
+End cells with the result as a bare expression: `print(...)` stringifies it and loses its custom display. If printing or reformatting would read better, fix the repr or tell the user rather than silently working around it. Summarise what docs or results say rather than dumping them, unless the user needs it all.
 """
 
 # inspect is unused - imported to show that non-owned submodules aren't listed in doc/xdir

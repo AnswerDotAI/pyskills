@@ -2,28 +2,23 @@
 
 A pyskill is a standard Python module that registers itself via entry points so LLM hosts can discover and load it.
 
-## 1. Create your module
+## 1. Module
 
-Your module needs:
-- A docstring: first paragraph is the short description shown during discovery; the rest is read by the LLM after loading.
-- `__all__` (optional): if provided, `doc()` and `xdir()` show exactly these symbols. Otherwise they fall back to non-private names defined in the module (not just imported), plus explicitly imported sibling submodules. Curate this carefully: consumers are told to `import *` from pyskill modules, so it defines your public API.
+- Docstring: its first paragraph is the discovery description; the rest is read after loading.
+- `__all__` (optional): `doc()`/`xdir()` show these plus sibling submodules the module explicitly imports; without it, non-private names defined (not just imported) in the module plus those submodules. Consumers `import *` from pyskills, so `__all__` is your public API: curate it.
 
-## 2. Register via entry point
+## 2. Entry point
 
-In your `pyproject.toml`:
+In `pyproject.toml` (key: any name; value: module path):
 
     [project.entry-points.pyskills]
     my_skill = "mypackage.mymodule"
 
-The key is an arbitrary name; the value is the module path.
+## 3. Documentation where it's used
 
-## 3. Put documentation where it is used
+The module docstring gives the higher-level picture (pieces, how they fit, workflow, shared constraints, when to use which) and points to each piece's `doc()`. Function-specific detail goes in that function's docstring and docments: don't repeat parameter descriptions, method inventories, defaults, result fields, or per-operation recipes in the module docstring (`doc(module)` already lists the API). Together, the module docstring and API docs must cover every tool-specific behaviour, including limits, failure modes, and defaults.
 
-The module docstring teaches scope, shared constraints, and workflow. Do not repeat parameter descriptions, method inventories, defaults, result fields, or recipes for individual operations there. `doc(module)` already lists the public API.
-
-Require readers to inspect the actual object before using it. State why this matters for your particular skill. For browser control, input events, readiness, and resource ownership change which operation is appropriate. For API clients, generated parameters and bound account/repository defaults belong to the instance, not its class.
-
-Use progressive discovery:
+Tell readers to inspect the actual object before using it, and say why for your skill (browser control: input events, readiness, and resource ownership change which operation fits; API clients: generated parameters and bound account/repository defaults belong to the instance, not its class). Progressive discovery:
 
     doc(skill)                       # scope and shared workflow
     doc(Client)                      # constructor and class overview
@@ -31,21 +26,21 @@ Use progressive discovery:
     xdir(client.group, 'query')       # names on a large surface
     doc(client.group.operation)      # full docs before the call
 
-Class and namespace listings are overviews. Entries marked `…` have omitted detail. Read the selected callable's full docstring and docments. Custom namespace displays, such as fastspec groups, explain how to descend. Inspect properties on their class rather than evaluating them just to get documentation.
+Class and namespace listings are overviews: `…` marks omitted detail, so read the chosen callable's full docstring and docments. Custom namespace displays (e.g. fastspec groups) explain how to descend. Inspect properties on their class rather than evaluating them for docs.
 
-Put parameter-specific contracts in docments beside the signature. Put operation-wide behavior, errors, usage conditions, and result structure in the operation's docstring. Describe the returned object's fields or point to its type's documentation. Put explanations and executable lessons in the notebook narrative. In nbdev projects, read `nbdev.skill` before editing the source notebook; do not edit generated modules.
+Placement: parameter-specific contracts in docments beside the signature; operation-wide behaviour, errors, usage conditions, and result structure in the operation's docstring; returned fields described there or via the type's docs; explanations and executable lessons in the notebook narrative. In nbdev projects, read `nbdev.skill` before editing the source notebook; never edit generated modules.
 
-For dynamic APIs, keep `__dir__` truthful and safe to call. It should list supported names without doing the operations. Carry the effective signature on the callable as `__signature__`; keep its name and instance-specific documentation too. Descriptions in `Annotated` metadata travel with generated parameters into `docments` and delegated wrappers. Do not replace an operation with `type(operation).__call__` when documenting it: that loses its generated signature and defaults.
+Dynamic APIs: keep `__dir__` truthful and safe to call (supported names, without doing the operations); carry the effective signature on the callable as `__signature__`, with its name and instance-specific docs. `Annotated` metadata descriptions travel with generated parameters into `docments` and delegated wrappers. Don't document an operation via `type(operation).__call__`: that loses its generated signature and defaults.
 
-`doc()` preserves `_repr_markdown_` displays. Use that when a namespace or generated object already has a useful documentation view. A result's custom display can instead show data, such as a browser accessibility tree; direct readers to its type for API documentation. Ordinary functions and methods need no custom rendering.
+`doc()` preserves `_repr_markdown_`: use it when a namespace or generated object already has a useful doc view. A result's custom display can show data instead (e.g. a browser accessibility tree); point readers to its type for API docs. Ordinary functions and methods need no custom rendering.
 
 ## 4. Review the rendered experience
 
-Read the actual `doc()` results, not just the source docstrings. Inspect the module, representative classes, bound methods, returned objects, and generated operations. Read long operation docs in full. Check that notes, parameter documentation, async usage, and result lifetimes are visible at the level where a reader needs them.
+Read actual `doc()` output, not just source docstrings: the module, representative classes, bound methods, returned objects, and generated operations, with long operation docs in full. Check that notes, parameter docs, async usage, and result lifetimes are visible where a reader needs them.
 
-Before shortening an existing skill, identify where each removed fact will remain available. Move missing contracts to their owning API docs first. Fix discovery or rendering gaps instead of retaining a manual inventory as a workaround. Keep a short, domain-specific explanation of the discovery workflow in the skill.
+Before shortening a skill, identify where each removed fact will stay available, and move missing contracts to their owning API docs first. Fix discovery or rendering gaps rather than keeping a manual inventory as a workaround. Keep a short, domain-specific explanation of the discovery workflow in the skill.
 
-Revise existing notebook examples to teach changed behavior. Assert the useful contract, not an entire formatted output. Verify generated clients using locally constructed objects when no request is needed; documenting an API must not require spending tokens, changing remote state, or opening a browser.
+Revise existing notebook examples to teach changed behaviour. Assert the useful contract, not a whole formatted output. Verify generated clients with locally constructed objects when no request is needed: documenting an API must not spend tokens, change remote state, or open a browser.
 
 ## 5. Module contract example
 
@@ -66,23 +61,19 @@ Revise existing notebook examples to teach changed behavior. Assert the useful c
             "Does something"
             ...
 
-After import, the LLM inspects the module with `doc(module)` (overview of classes, functions, and submodules) and `xdir(module)` (filtered list of public symbols).
+After import, the LLM runs `doc(module)` (classes, functions, submodules) and `xdir(module)` (filtered public symbols).
 
 ## 6. Folder-local skills
 
-When the host enables folder-local skills, put a public `.py` module or a package with `__init__.py` in `_pyskills/` under the dialog's opening folder or one of its ancestors. Each top-level module or package is a skill. Package submodules are implementation modules; leading-underscore names are private. Supply the same module docstring and curated API as an installed skill. No `pyproject.toml`, installation, or manual entry-point registration is needed.
+With the host's folder-local skills enabled, put a public `.py` module, or a package with `__init__.py`, in `_pyskills/` under the dialog's opening folder or an ancestor. Each top-level module or package is a skill; package submodules are implementation modules, and leading-underscore names are private. Supply the same docstring and curated API as an installed skill; no `pyproject.toml`, install, or entry point is needed. `doc(pyskills.core)` covers duplicate names, conflicts with other modules, and picking up new files.
 
-The nearest folder wins between local duplicates. Names conflicting with existing importable modules raise an error. Discovery reads docstrings without executing skill code. New files in the selected ancestor locations become discoverable, but imported modules retain normal Python caching.
-
-Hosts call `enable_local_skills(opening_folder)` at startup, before loading their tool layer. Read its full docs first. Solveit's dialoghelper bootstrap does this automatically. The scope stays fixed when cwd changes or a live dialog moves; a new kernel can select a different folder. Discovery does not grant permission to execute tools.
+Hosts call `enable_local_skills(opening_folder)` at startup, before loading their tool layer (read its full docs first); Solveit's dialoghelper bootstrap does this. The scope stays fixed when cwd changes or a live dialog moves; a new kernel can select another folder. Discovery grants no permission to execute tools.
 
 ## 7. User-wide pyskills without packaging
 
-The entry point approach above requires a full package install. For quick personal pyskills, or pyskills shared across projects with isolated environments (e.g. separate uv venvs), pyskills provides an XDG-based pyskills directory.
+For quick personal pyskills, or ones shared across projects with isolated environments (e.g. separate uv venvs), without a package install: the first `import pyskills` in an environment creates an XDG pyskills dir (typically `~/.local/share/pyskills/`) and writes a `.pth` into that environment's `site-packages` putting it on `sys.path`, so modules there import normally, with no special machinery. Every environment that imports pyskills adds the same dir, so its modules are shared across environments.
 
-When you first `import pyskills`, it creates a directory at your XDG data home (typically `~/.local/share/pyskills/`) and writes a `.pth` file into `site-packages`. This `.pth` file tells Python to add the pyskills directory to `sys.path` on startup, so any modules placed there are importable as standard Python modules without any special import machinery. This works across all Python environments on your system, even separate uv projects with isolated venvs.
-
-You can create a pyskill programmatically with `register_pyskill`:
+Create one with `register_pyskill`:
 
     from pyskills.core import register_pyskill
 
@@ -94,7 +85,5 @@ You can create a pyskill programmatically with `register_pyskill`:
         return f"Hello, {name}!"
     ''')
 
-This writes the module file into the XDG pyskills directory and creates a minimal dist-info entry point, so the pyskill immediately appears in `list_pyskills()`.
-
-Use `enable_pyskill(name)` / `disable_pyskill(name)` to toggle a pyskill's visibility without deleting files. Use `pyskills_dir()` to see where the directory is.
+`enable_pyskill(name)`/`disable_pyskill(name)` toggle visibility without deleting files; `pyskills_dir()` shows the directory.
 """
