@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.34
+
+### New Features
+
+- Extend `__pyskill_sigs__` elision to instances and dynamic `__getattr__` names ([#61](https://github.com/AnswerDotAI/pyskills/issues/61))
+
+
 ## 0.0.33
 
 ### New Features
