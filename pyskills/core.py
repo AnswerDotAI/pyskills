@@ -28,7 +28,7 @@ An overview line ending in `…` has more documentation than it shows. Read `doc
 
 Class and namespace overviews inspect properties without evaluating them. An object's custom `_repr_markdown_` supplies its own display, including generated API documentation or a data-oriented result view.
 
-Set `__pyskill_sigs__ = False` when a module's type and function listings are too large for its overview. `doc()` keeps the docstring and reports how many entries it omitted. Pass `all=True` to include those entries.
+Set `__pyskill_sigs__ = False` when listings are too large for an overview. Set it at module level for a module, or on the class for an instance. If the object serves some names through `__getattr__`, `doc()` hides only those and lists the rest. Otherwise it hides every entry except submodules. The overview keeps the docstring, reports how many entries it hid, and points to `xdir`, `docfind` and `all=True`.
 
 A package docstring can explain which submodules a reader needs, as nbdev's generated package documentation does. When the cleaned docstring has more than three lines, `doc()` hides the automatic submodule list. A default summary and documentation link do not meet that threshold. Pass `all=True` to show the list.
 
@@ -284,13 +284,27 @@ def _member(sym, name):
     if inspect.isdatadescriptor(raw): return raw
     return getattr(sym, name)
 
-def _xdir(sym):
+def _xdir(sym, names=None):
     "Public members, retaining data descriptors without evaluating them"
+    if names is None: names = _xnames(sym)
     if isinstance(sym, types.ModuleType):
         subs = _imported_submods(sym)
-        return [(n, subs[n] if n in subs else getattr(sym, n)) for n in _xnames(sym)]
-    if isinstance(sym, type): return [(n, inspect.getattr_static(sym, n)) for n in _xnames(sym)]
-    return [(n, _member(sym, n)) for n in _xnames(sym)]
+        return [(n, subs[n] if n in subs else getattr(sym, n)) for n in names]
+    if isinstance(sym, type): return [(n, inspect.getattr_static(sym, n)) for n in names]
+    return [(n, _member(sym, n)) for n in names]
+
+_missing = object()
+def _hidden(sym, names, all):
+    "Names `__pyskill_sigs__ = False` hides from `sym`'s overview, and whether they're served by `__getattr__`"
+    if all or inspect.getattr_static(sym, '__pyskill_sigs__', True) is not False: return set(), False
+    raws = {n:inspect.getattr_static(sym, n, _missing) for n in names}
+    if served := {n for n,r in raws.items() if r is _missing}: return served, True
+    return {n for n,r in raws.items() if not isinstance(r, types.ModuleType)}, False
+
+def _elision(sym, hidden, served):
+    ref = f"'{sym.__name__}'" if isinstance(sym, types.ModuleType) else 'obj'
+    kind = 'dynamic names' if served else 'entries'
+    return f"\n## elided: {len(hidden)} {kind}. `xdir({ref}, q)` finds them by name, `docfind({ref}, q)` searches their docs, and `doc({ref}, all=True)` lists them."
 
 # %% ../nbs/00_core.ipynb #15e66852
 def _doc1(sym, all=False):
@@ -299,7 +313,7 @@ def _doc1(sym, all=False):
     try:
         if isinstance(sym, type) and getattr(sym, '__name__', ''): return PrettyString(_doc_class(sym))
         if hasattr(sym, '_repr_markdown_'): return PrettyString(sym._repr_markdown_())
-        if _dynamic(sym): return _doc_instance(sym, _xdir(sym))
+        if _dynamic(sym): return _doc_instance(sym, all)
         if callable(sym) and can_render(sym): return PrettyString(MarkdownRenderer(sym))
     except Exception as e: return PrettyString(f'{docstring(sym)}\n(doc render failed: {type(e).__name__}: {e})'.strip())
     if '__str__' in type(sym).__dict__: return str(sym)
@@ -374,9 +388,11 @@ def _doc_class(sym):
 def _doc_module(mod, all=False):
     parts = [f'# module {mod.__name__}:\n']
     if mod.__doc__: parts.append(f'"""{inspect.cleandoc(mod.__doc__)}\n"""')
-    groups,refs = getattr(mod, '__pyskill_params__', {}),{}
+    groups,refs = inspect.getattr_static(mod, '__pyskill_params__', {}),{}
     typs,funcs,subs = [],[],[]
-    for name,obj in _xdir(mod):
+    names = _xnames(mod)
+    hidden,served = _hidden(mod, names, all)
+    for name,obj in _xdir(mod, [n for n in names if n not in hidden]):
         d = docstring(obj).splitlines()
         comment = f': ...  # {d[0].strip()}' if d and d[0].strip() else ''
         if isinstance(obj, types.ModuleType): subs.append(f'  {name}{comment}')
@@ -391,14 +407,12 @@ def _doc_module(mod, all=False):
             if _elided(obj, d): comment = f'{comment}…' if comment else ': …  # …'
             sig = (groups and _grouped_sig(obj, name, groups, refs)) or fmt_sig(obj)
             funcs.append(f'- {pre} {name}{sig}{comment}')
-    if not all and not getattr(mod, '__pyskill_sigs__', True):
-        parts.append(f"\n## elided: {len(typs)} types, {len(funcs)} functions. `doc('{mod.__name__}', all=True)` lists them.")
-        typs = funcs = refs = ()
     if typs: parts += ['\n## types:', *typs]
     if funcs: parts += ['\n## functions:', *funcs]
     if refs:
         parts.append('\n## shared params:')
         for g,r in refs.items(): parts += _fmt_group(g, *r)
+    if hidden: parts.append(_elision(mod, hidden, served))
     if subs and not all and len(inspect.cleandoc(mod.__doc__ or '').splitlines())>3:
         parts.append(f"\n## elided: {len(subs)} submodules. `doc('{mod.__name__}', all=True)` lists them.")
         subs = ()
@@ -434,17 +448,20 @@ def _fmt_group(g, name, f, ps):
     return lines
 
 # %% ../nbs/00_core.ipynb #ccca39db
-def _doc_instance(sym, items):
+def _doc_instance(sym, all=False):
     parts = [f'Instance of type {type(sym).__name__}:']
     if d := docstring(type(sym) if callable(sym) else sym): parts.append(d)
     if callable(sym): parts.append(_fmt_method('__call__', sym).strip())
-    for name,obj in items:
+    names = _xnames(sym)
+    hidden,served = _hidden(sym, names, all)
+    for name,obj in _xdir(sym, [n for n in names if n not in hidden]):
         if isinstance(obj, property): parts.append(_fmt_method(name, obj.fget, '@property\n    ').strip())
         elif callable(obj) and not _dynamic(obj): parts.append(_fmt_method(name, obj).strip())
         else:
             d = docstring(type(obj)).splitlines() if _dynamic(obj) else []
             comment = f'  # {d[0]}' if d else ''
             parts.append(f'- {name}: {type(obj).__name__}{comment}')
+    if hidden: parts.append(_elision(sym, hidden, served))
     parts.append('\nOverview only. Read `doc(obj.member)` for entries marked …; inspect properties on the class without evaluating them.')
     return PrettyString('\n'.join(parts))
 
