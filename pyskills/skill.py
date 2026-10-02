@@ -8,7 +8,7 @@ When several pyskills could fit, read `doc()` for each: one-line descriptions ma
 
 # Reading docs
 
-You MUST read the full `doc()` of each function, class, method, and magic before its first use, unless that doc is already visible in the conversation. A trailing `…` on an overview row marks omitted docments or usage notes. A row without it is the full doc. For a magic, doc the function that implements it, as named in its skill's docs. You MUST re-read any doc, module overviews included, when its earlier output is no longer visible. A kernel restart alone is no reason to re-read.
+You MUST read the full `doc()` of each function, class, method, and magic before its first use, unless its FULL uncompacted `doc()` output is visible in the conversation. A trailing `…` on an overview row marks omitted docments or usage notes. A row without it is the full doc. For a magic, doc the function that implements it, as named in its skill's docs. You MUST re-read any doc, module overviews included, when its earlier output is no longer visible. A kernel restart alone is no reason to re-read.
 
 `doc()` works on any module, not just pyskills. Read at increasing detail: module, then class or namespace, then each callable. Pass several objects to one `doc()` call:
 
