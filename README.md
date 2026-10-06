@@ -7,7 +7,11 @@ pyskills is a plugin system that lets Python packages register “skills” (uni
 
 It includes [`list_pyskills()`](https://AnswerDotAI.github.io/pyskills/core.html#list_pyskills) for discovery, [`doc()`](https://AnswerDotAI.github.io/pyskills/core.html#doc) for rendering module/class/function documentation in LLM-friendly format, [`xdir()`](https://AnswerDotAI.github.io/pyskills/core.html#xdir) for listing a module or class’s public symbols, and an [`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow) system for registering safe callable access in sandboxed environments. Skills can be installed as regular packages with entry points, or dropped into an XDG data directory for quick local use.
 
-pyskills shares the progressive disclosure philosophy of the [Agent Skills](https://agentskills.io/specification) specification: both separate lightweight discovery metadata from full instructions loaded on demand. However, where Agent Skills uses a file-system convention (`SKILL.md` with YAML frontmatter, `scripts/`, `references/` directories), pyskills takes a Python-native approach: pyskills are regular Python modules discovered via standard entry points, documented with docstrings, and loaded with `import`. This means pyskills are directly executable, come with auto-generated structured documentation via [`doc()`](https://AnswerDotAI.github.io/pyskills/core.html#doc), and include a sandboxing layer via [`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow) for safe execution. This makes pyskills a superset that covers discovery, documentation, execution, and security in one system.
+pyskills follows the progressive disclosure approach of the [Agent Skills](https://agentskills.io/specification) specification. Both keep a short description for discovery apart from the full instructions loaded on demand. Agent Skills stores a skill as files: a `SKILL.md` with YAML frontmatter, plus `scripts/` and `references/` directories. A pyskill is a regular Python module instead. A standard entry point registers it, its docstrings document it, and `import` loads it. Because it’s ordinary Python, a host can use the same module to:
+
+- run its functions directly
+- read the structured documentation that [`doc()`](https://AnswerDotAI.github.io/pyskills/core.html#doc) generates
+- run it in a sandbox, where the callables it registers with [`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow) may perform operations the sandbox otherwise denies
 
 ## Usage
 
