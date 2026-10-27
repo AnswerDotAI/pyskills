@@ -10,5 +10,5 @@ Modules:
 - `pyskills.createskill`: How to create a pyskills pyskill module.
 - `pyskills.skill`: Python packages register tool modules as pyskills. `list_pyskills()` lists installed skills and one-line descriptions without imports. Load a module with a normal import, then read `doc(module)`."""
 
-__version__ = "0.0.35"
+__version__ = "0.0.36"
 from .core import *
