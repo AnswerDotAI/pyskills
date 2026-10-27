@@ -47,17 +47,17 @@ Docs: https://AnswerDotAI.github.io/pyskills/core.html.md"""
 # %% auto #0
 __all__ = ['find_spec_noimport', 'ep_desc', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosAllowPolicy',
            'PathWritePolicy', 'OpenWritePolicy', 'SymbolNotFound', 'resolve', 'xdir', 'doc', 'fmt_sig', 'docfind',
-           'pyskills_dir', 'ensure_pyskills_dir', 'clear_mod', 'enable_pyskill', 'register_pyskill', 'disable_pyskill',
-           'delete_pyskill', 'enable_local_skills', '__pytools__']
+           'info_md', 'pyskills_dir', 'ensure_pyskills_dir', 'clear_mod', 'enable_pyskill', 'register_pyskill',
+           'disable_pyskill', 'delete_pyskill', 'enable_local_skills', '__pytools__']
 
 # %% ../nbs/00_core.ipynb #38e384dc
 from fastcore.utils import *
-from fastcore.docments import MarkdownRenderer,can_render,docments,docstring,ann_parts
+from fastcore.docments import MarkdownRenderer,can_render,docments,docstring,ann_parts,DocmentText
 from fastcore.xdg import *
 from importlib.metadata import entry_points
 from importlib.machinery import ModuleSpec
 from pkgutil import get_importer
-import builtins, importlib.util, types, inspect, collections, ast, site, shutil, sys, typing, textwrap
+import builtins, importlib.util, types, inspect, collections, ast, site, shutil, sys, typing, textwrap, functools
 from fastaudit.core import track_call
 
 # %% ../nbs/00_core.ipynb #3ec024c7
@@ -482,6 +482,42 @@ def docfind(o:str|object, q:str, n:int=2, _pre:str=''):
             nm = f'{_pre}.{k}' if _pre else k
             res += docfind(child, q, n-1, nm)
     return res
+
+# %% ../nbs/00_core.ipynb #f455af35
+def _src_target(obj):
+    "Object whose file and source best represent `obj`: wrappers, properties and partials unwrap; instances resolve to their type"
+    if not hasattr(obj, '__signature__'): obj = getattr(obj, '__wrapped__', obj)
+    obj = getattr(obj, 'fget', None) or getattr(obj, 'fset', None) or obj
+    if isinstance(obj, functools.partial): obj = obj.func
+    if isinstance(obj, (type, types.ModuleType, types.FunctionType, types.MethodType, types.BuiltinFunctionType)): return obj
+    return type(obj)
+
+def _file_line(obj):
+    "`**File:**` line for `obj`, or `None` for builtins and other objects without a source file"
+    try: f = str(inspect.getfile(obj))
+    except TypeError: return None
+    try: ln = f"; line: {inspect.getsourcelines(obj)[1]}"
+    except (TypeError, OSError): ln = ''
+    return f"**File:** `{f}`{ln}"
+
+def info_md(
+    obj:str|object, # Object to get info for, or its name
+    source:bool=False # Show the source, like `??`, instead of the signature and docstring
+):
+    "IPython's `?` (or `??` with `source=True`) for `obj`, as Markdown"
+    obj = resolve(obj)
+    tgt = _src_target(obj)
+    src = None
+    if source:
+        try: src = textwrap.dedent(inspect.getsource(tgt))
+        except (TypeError, OSError): pass
+    out = [f"````python\n{src or DocmentText(obj)}\n````"]
+    if not source and tgt is type(obj):
+        s = str(obj).partition('\n')[0]
+        out.append(f"**String form:** `{truncstr(s, 100)}`")
+    if f := _file_line(tgt): out.append(f)
+    if not source: out.append(f"**Type:** {type(obj).__name__}")
+    return PrettyString('\n\n'.join(out))
 
 # %% ../nbs/00_core.ipynb #a486485f
 def pyskills_dir():

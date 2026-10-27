@@ -8,7 +8,7 @@ Modules:
 
 - `pyskills.core`: Skill discovery, LLM-friendly doc rendering, the allow registry, and pyskill registration
 - `pyskills.createskill`: How to create a pyskills pyskill module.
-- `pyskills.skill`: Pyskills are tool modules that Python packages register so you can find them without importing everything. `list_pyskills()` names the ones installed, with a one-line description each, and needs no imports. Load one with a normal import, then read its docs with `doc()`."""
+- `pyskills.skill`: Python packages register tool modules as pyskills. `list_pyskills()` lists installed skills and one-line descriptions without imports. Load a module with a normal import, then read `doc(module)`."""
 
 __version__ = "0.0.35"
 from .core import *
