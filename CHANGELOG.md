@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.35
+
+### New Features
+
+- Add `info_md` to render IPython ?/?? output as Markdown with signature, docstring, source, file/line and type ([#62](https://github.com/AnswerDotAI/pyskills/issues/62))
+
+
 ## 0.0.34
 
 ### New Features
