@@ -325,9 +325,9 @@ def doc(
     sym:str|object,   # Object (or dotted name) to document; use the instance for a generated or bound API
     *syms:str|object,  # More objects: each doc appended as its own blank-line-separated section
     all:bool=False    # Show symbol listings elided by `__pyskill_sigs__=False`?
-)->str: # A `PrettyString`: IPython renders a bare final call; assign it to skip rendering
+)->str: # A `FullString`: IPython renders a bare final call; assign it to skip rendering
     "Full callable documentation or a module/class/namespace overview; custom Markdown displays are preserved"
-    return PrettyString('\n\n'.join(str(_doc1(s, all)) for s in (sym, *syms)))
+    return FullString('\n\n'.join(str(_doc1(s, all)) for s in (sym, *syms)))
 
 # %% ../nbs/00_core.ipynb #90aae7aa
 class _N:
