@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.36
+
+### New Features
+
+- Return FullString from doc() so complete documentation is retained during compaction ([#63](https://github.com/AnswerDotAI/pyskills/issues/63))
+
+
 ## 0.0.35
 
 ### New Features
