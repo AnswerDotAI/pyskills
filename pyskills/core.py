@@ -62,7 +62,7 @@ from fastcore.meta import delegates
 from importlib.metadata import entry_points
 from importlib.machinery import ModuleSpec
 from pkgutil import get_importer
-import builtins, json, importlib.util, types, inspect, collections, ast, site, shutil, sys, typing, textwrap, functools
+import builtins, json, importlib.util, types, inspect, collections, ast, site, sys, typing, textwrap, functools
 from fastaudit.core import track_call
 
 # %% ../nbs/00_core.ipynb #3ec024c7
@@ -541,8 +541,7 @@ def ensure_pyskills_dir():
         pth = Path(sp) / 'pyskills.pth'
         if pth.exists() and sd in pth.read_text(): break
         try:
-            Path(sp).mkdir(parents=True, exist_ok=True)
-            pth.write_text(sd + '\n')
+            pth.mk_write(sd + '\n')
             break
         except (PermissionError, OSError): pass
     sys.path.append(sd)
@@ -563,9 +562,8 @@ def _pyskill_dist(name): return pyskills_dir() / f'{name.replace(".", "_")}-0.0.
 def enable_pyskill(name):
     "Enable pyskill `name` by creating its dist-info entry point"
     di = _pyskill_dist(name)
-    di.mkdir(exist_ok=True)
-    (di / 'METADATA').write_text(f'Name: {name.replace(".", "_")}\nVersion: 0.0.1\n')
-    (di / 'entry_points.txt').write_text(f'[pyskills]\n{name} = {name}\n')
+    (di / 'METADATA').mk_write(f'Name: {name.replace(".", "_")}\nVersion: 0.0.1\n')
+    (di / 'entry_points.txt').mk_write(f'[pyskills]\n{name} = {name}\n')
     clear_mod(name.split('.')[0])
 
 def register_pyskill(name, docstr, code=''):
@@ -573,16 +571,14 @@ def register_pyskill(name, docstr, code=''):
     sd = pyskills_dir()
     parts = name.split('.')
     mod_dir = sd / Path(*parts[:-1]) if len(parts) > 1 else sd
-    mod_dir.mkdir(parents=True, exist_ok=True)
+    (mod_dir / f'{parts[-1]}.py').mk_write(f'"""{docstr}"""\n{code}')
     for i in range(len(parts)-1): (sd / Path(*parts[:i+1]) / '__init__.py').touch()
-    (mod_dir / f'{parts[-1]}.py').write_text(f'"""{docstr}"""\n{code}')
     enable_pyskill(name)
 
 # %% ../nbs/00_core.ipynb #b80e18a8
 def disable_pyskill(name):
     "Disable pyskill `name` by removing its dist-info entry point"
-    di = _pyskill_dist(name)
-    if di.exists(): shutil.rmtree(di)
+    _pyskill_dist(name).delete()
     clear_mod(name.split('.')[0])
 
 # %% ../nbs/00_core.ipynb #1e4f4c4c
@@ -592,7 +588,7 @@ def delete_pyskill(name):
     sd = pyskills_dir()
     parts = name.split('.')
     mod_file = sd / Path(*parts[:-1]) / f'{parts[-1]}.py' if len(parts) > 1 else sd / f'{parts[-1]}.py'
-    if mod_file.exists(): mod_file.unlink()
+    mod_file.delete()
 
 # %% ../nbs/00_core.ipynb #785498bf
 from importlib.metadata import Distribution, DistributionFinder
@@ -700,7 +696,7 @@ def _is_stub(d):
 
 def _stub_files(d):
     "Text of each file under directory `d`, keyed by path inside it"
-    return {p.relative_to(d).as_posix(): p.read_text() for p in d.rglob('*') if p.is_file()}
+    return {p.relative_to(d).as_posix(): p.read_text() for p in pglob(d)}
 
 @delegates(skill_stubs)
 def export_skills(
@@ -710,17 +706,14 @@ def export_skills(
     """Write the stub of each pyskill into `dest`, and remove the stubs of pyskills that are gone.
 
     Raises ValueError before writing or removing any stub when `dest` holds a skill with a stub's name that is not a stub."""
-    dest = Path(dest).expanduser()
-    dest.mkdir(parents=True, exist_ok=True)
+    dest = mkdir(Path(dest).expanduser(), exist_ok=True, parents=True)
     stubs = skill_stubs(**kwargs)
-    old = {d.name for d in dest.iterdir() if _is_stub(d)}
+    old = {d.name for d in dest.ls() if _is_stub(d)}
     for name in stubs:
         if (dest/name).exists() and name not in old: raise ValueError(f'{dest/name} exists and is not a pyskills stub')
     removed = sorted(old - set(stubs))
     written = [name for name,files in stubs.items() if _stub_files(dest/name) != files]
-    for name in removed + [n for n in written if n in old]: shutil.rmtree(dest/name)
+    for name in removed + written: (dest/name).delete()
     for name in written:
-        for f,txt in stubs[name].items():
-            (dest/name/f).parent.mkdir(parents=True, exist_ok=True)
-            (dest/name/f).write_text(txt)
+        for f,txt in stubs[name].items(): (dest/name/f).mk_write(txt)
     return dict(written=written, removed=removed)
