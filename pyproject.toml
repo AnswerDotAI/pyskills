@@ -33,6 +33,7 @@ pyskills = "pyskills._modidx:d"
 
 [project.scripts]
 pyskills-doc = "pyskills.cli:doc_cli"
+pyskills-export = "pyskills.cli:export_cli"
 
 [tool.setuptools.dynamic]
 version = {attr = "pyskills.__version__"}

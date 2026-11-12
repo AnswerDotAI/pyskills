@@ -9,7 +9,7 @@ A pyskill is a standard Python module that registers itself via entry points so 
 
 ## 2. Entry point
 
-In `pyproject.toml` (key: any name; value: module path):
+In `pyproject.toml` (key: any name, used by `export_skills` to name the pyskill's command; value: module path):
 
     [project.entry-points.pyskills]
     my_skill = "mypackage.mymodule"

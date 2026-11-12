@@ -127,6 +127,19 @@ pyskills-doc --all aidialog.dlgskill
 
 Run `pyskills-doc --help` for the complete command syntax.
 
+### Commands in Claude Code and Codex
+
+`pyskills-export` gives every pyskill a command in a host that reads [Agent Skills](https://agentskills.io/specification) directories. It writes one stub per pyskill into the host’s skills directory:
+
+``` bash
+pyskills-export ~/.claude/skills   # Claude Code: /py-ghapi
+pyskills-export ~/.agents/skills   # Codex: $py-ghapi
+```
+
+A stub is named `py-` plus the pyskill’s entry-point key. It tells the model to import the module in the kernel and read `doc(module)`. The model does not choose a stub by itself. You invoke it. The model still finds pyskills through [`list_pyskills()`](https://AnswerDotAI.github.io/pyskills/core.html#list_pyskills).
+
+Run the command again after you install or remove pyskills. It removes the stubs of pyskills that are gone and leaves the other skills in the directory alone.
+
 ### The [`allow`](https://AnswerDotAI.github.io/pyskills/core.html#allow) system
 
 When pyskills run in a sandboxed environment like [safepyrun](https://github.com/AnswerDotAI/safepyrun), they need to declare which callables are trusted to perform otherwise-denied operations (filesystem writes, subprocesses, network access). safepyrun uses [fastaudit](https://github.com/AnswerDotAI/fastaudit) to deny those effects unless they happen inside a callable registered in the `__pytools__` registry. The [`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow) function is how pyskills register their trusted callables.
@@ -211,7 +224,7 @@ To register your module as a discoverable pyskill, add an entry point in your `p
 my_skill = "mypackage.mymodule"
 ```
 
-The key is an arbitrary name; the value is the module path. After installing the package, [`list_pyskills()`](https://AnswerDotAI.github.io/pyskills/core.html#list_pyskills) will include your pyskill automatically.
+The value is the module path. `pyskills-export` names the pyskill’s command after the key. After installing the package, [`list_pyskills()`](https://AnswerDotAI.github.io/pyskills/core.html#list_pyskills) will include your pyskill automatically.
 
 For full details on creating pyskills, including allow policies for write-guarded operations, see `doc(createskill)` after importing it as shown above.
 
