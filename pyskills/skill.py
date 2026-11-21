@@ -3,6 +3,8 @@ r"""Python packages register tool modules as pyskills. `list_pyskills()` lists i
 
 # Finding skills
 
+- session start, post-compaction: `list_pyskills()` and `doc()` baseline skills
+- task-specific skills, modules: MUST `doc()` matching `list_pyskills()` entries (writing, review, style guides too, not only libraries) before first related task; skip while full uncompacted output in view
 - load: normally `from <module> import *`    /`__all__` is the API
 - `_pyskills/` in dialog's opening folder or an ancestor: listed, imported normally, where host exposes them; host fixes scope, cwd changes don't move it
 - discovery grants no tool permissions
