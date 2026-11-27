@@ -46,9 +46,10 @@ Docs: https://AnswerDotAI.github.io/pyskills/core.html.md"""
 
 # %% auto #0
 __all__ = ['find_spec_noimport', 'ep_desc', 'Pyskills', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosAllowPolicy',
-           'PathWritePolicy', 'OpenWritePolicy', 'SymbolNotFound', 'resolve', 'xdir', 'doc', 'fmt_sig', 'pkg_mods',
-           'norm_docs', 'docfind', 'info_md', 'pyskills_dir', 'ensure_pyskills_dir', 'clear_mod', 'enable_pyskill',
-           'register_pyskill', 'disable_pyskill', 'delete_pyskill', 'enable_local_skills', '__pytools__']
+           'PathWritePolicy', 'OpenWritePolicy', 'SymbolNotFound', 'resolve', 'xdir', 'doc', 'fmt_sig',
+           'has_public_api', 'pkg_mods', 'norm_docs', 'docfind', 'info_md', 'mod_md', 'pyskills_dir',
+           'ensure_pyskills_dir', 'clear_mod', 'enable_pyskill', 'register_pyskill', 'disable_pyskill',
+           'delete_pyskill', 'enable_local_skills', '__pytools__']
 
 # %% ../nbs/00_core.ipynb #38e384dc
 from fastcore.utils import *
@@ -257,7 +258,8 @@ def _is_own(sym, n):
     "Whether name `n` in module `sym` is an owned symbol or sibling submodule"
     m = getattr(sym, n, None)
     if m is None: return False
-    if getattr(m, '__module__', None) == sym.__name__: return True
+    mod = getattr(m, '__module__', None) or ''
+    if mod == sym.__name__ or mod.startswith(sym.__name__ + '._'): return True
     if not isinstance(m, types.ModuleType): return False
     mname = m.__name__
     if sym.__name__.startswith(mname + '.'): return False
@@ -398,6 +400,16 @@ def _doc_class(sym):
     return PrettyString('\n'.join(parts))
 
 # %% ../nbs/00_core.ipynb #608d7a90
+def has_public_api(
+    path:str|Path, # Python source file to inspect via AST
+)->bool:
+    "True when `path` defines public functions/classes or re-exports public names from a private submodule"
+    if not (m := parse_py_file(path, safe=True)): return False
+    if any(d.is_public for d in m.defs): return True
+    return any(isinstance(n, ast.ImportFrom) and n.level >= 1 and (n.module or '').startswith('_')
+        and any(not (a.asname or a.name).startswith('_') for a in n.names) for n in m.node.body)
+
+# %% ../nbs/00_core.ipynb #5c3041b3
 def pkg_mods(
     pkg_dir:str|Path, # Package directory
     pkg_name:str, # Top-level import name of the package
@@ -414,7 +426,7 @@ def pkg_mods(
         parts = rel.parent.parts if p.name == '__init__.py' else (*rel.parent.parts, rel.stem)
         if not parts or any(pt.startswith('_') for pt in parts): continue
         nm = '.'.join((pkg_name, *parts))
-        if nm not in skip and (m := parse_py_file(p, safe=True)) and any(d.is_public for d in m.defs): mods.append(nm)
+        if nm not in skip and has_public_api(p): mods.append(nm)
     return guidance, mods
 
 # %% ../nbs/00_core.ipynb #848e5608
@@ -609,6 +621,49 @@ def info_md(
     if f := _file_line(tgt): out.append(f)
     if not source: out.append(f"**Type:** {type(obj).__name__}")
     return PrettyString('\n\n'.join(out))
+
+# %% ../nbs/00_core.ipynb #1cfbf3b3
+def _render_class(name:str, cls:type) -> str:
+    parts = [f'## class {name}', MarkdownRenderer(cls)._repr_markdown_()]
+    for mname,raw in vars(cls).items():
+        if mname.startswith('_'): continue
+        if isinstance(raw, property) or inspect.isgetsetdescriptor(raw) or inspect.ismemberdescriptor(raw):
+            tag,body = ' *(property)*', docstring(raw)
+        elif isinstance(raw, (staticmethod, classmethod, _clsmethod)):
+            fn = getattr(cls, mname) if isinstance(raw, _clsmethod) else raw.__func__
+            tag = ' *(staticmethod)*' if isinstance(raw, staticmethod) else ' *(classmethod)*'
+            body = MarkdownRenderer(fn)._repr_markdown_() if can_render(fn) else docstring(fn)
+        elif callable(raw): tag,body = '', MarkdownRenderer(raw)._repr_markdown_() if can_render(raw) else docstring(raw)
+        else: continue
+        parts.append(f'### {name}.{mname}{tag}\n\n{body}' if body else f'### {name}.{mname}{tag}')
+    return '\n\n'.join(parts)
+
+# %% ../nbs/00_core.ipynb #abe581ca
+def mod_md(
+    mod:str|types.ModuleType, # Module or dotted import name to document
+    *, exclude_submods:set[str]=frozenset(), # Submodule names whose symbols live on their own pages
+    title:str=None, # Optional page title (defaults to module name)
+)->PrettyString:
+    "Render a Markdown API reference page for `mod` using `xdir` and `MarkdownRenderer`"
+    if isinstance(mod, str): mod = importlib.import_module(mod)
+    syms = []
+    for name in xdir(mod):
+        obj = getattr(mod, name, None)
+        if isinstance(obj, types.ModuleType) or (exclude_submods and getattr(obj, '__module__', None) in exclude_submods): continue
+        if isinstance(obj, type): syms.append(_render_class(name, obj))
+        elif callable(obj):
+            body = MarkdownRenderer(obj)._repr_markdown_() if can_render(obj) else docstring(obj)
+            syms.append(f'## {name}\n\n{body}' if body else f'## {name}')
+    if not syms: return PrettyString('')
+    raw_doc = re.sub(r'(?:^|\n+)Docs:\s*\S+\s*$', '', inspect.cleandoc(mod.__doc__ or '')).strip()
+    paras = raw_doc.split('\n\n') if raw_doc else []
+    first = ' '.join(paras[0].split()) if paras else ''
+    rest = '\n\n'.join(paras[1:]).strip() if first else ''
+    parts = [f'# {title or mod.__name__}']
+    if first: parts.append(f'> {first}')
+    if rest: parts.append(rest)
+    parts.append('\n\n---\n\n'.join(syms))
+    return PrettyString('\n\n'.join(p.strip() for p in parts if p.strip()) + '\n')
 
 # %% ../nbs/00_core.ipynb #a486485f
 def pyskills_dir():
