@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.39
+
+### New Features
+
+- Use pkgutil.`iter_modules` in `pkg_mods` to discover compiled extensions and drop private-submodule re-export heuristics ([#69](https://github.com/AnswerDotAI/pyskills/issues/69))
+
+
 ## 0.0.38
 
 ### New Features
