@@ -2,6 +2,13 @@
 
 <!-- do not remove -->
 
+## 0.0.38
+
+### New Features
+
+- Add `mod_md` and `has_public_api`, support private submodule re-exports, and return changed paths from `update_llms_txt` ([#68](https://github.com/AnswerDotAI/pyskills/issues/68))
+
+
 ## 0.0.37
 
 ### New Features
