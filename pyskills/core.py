@@ -58,7 +58,7 @@ from fastcore.pyparse import parse_py_file
 from fastcore.xdg import *
 from importlib.metadata import entry_points, metadata, packages_distributions
 from importlib.machinery import ModuleSpec
-from pkgutil import get_importer
+from pkgutil import get_importer, iter_modules
 import builtins, importlib.util, types, inspect, collections, ast, site, shutil, sys, typing, textwrap, functools
 from fastaudit.core import track_call
 
@@ -258,8 +258,7 @@ def _is_own(sym, n):
     "Whether name `n` in module `sym` is an owned symbol or sibling submodule"
     m = getattr(sym, n, None)
     if m is None: return False
-    mod = getattr(m, '__module__', None) or ''
-    if mod == sym.__name__ or mod.startswith(sym.__name__ + '._'): return True
+    if getattr(m, '__module__', None) == sym.__name__: return True
     if not isinstance(m, types.ModuleType): return False
     mname = m.__name__
     if sym.__name__.startswith(mname + '.'): return False
@@ -403,11 +402,8 @@ def _doc_class(sym):
 def has_public_api(
     path:str|Path, # Python source file to inspect via AST
 )->bool:
-    "True when `path` defines public functions/classes or re-exports public names from a private submodule"
-    if not (m := parse_py_file(path, safe=True)): return False
-    if any(d.is_public for d in m.defs): return True
-    return any(isinstance(n, ast.ImportFrom) and n.level >= 1 and (n.module or '').startswith('_')
-        and any(not (a.asname or a.name).startswith('_') for a in n.names) for n in m.node.body)
+    "True when `path` defines public functions or classes"
+    return bool((m := parse_py_file(path, safe=True)) and any(d.is_public for d in m.defs))
 
 # %% ../nbs/00_core.ipynb #5c3041b3
 def pkg_mods(
@@ -421,13 +417,16 @@ def pkg_mods(
     skip = {pkg_name, f'{pkg_name}.skill', guidance}
     if mod_urls: return guidance, [m for m in sorted(mod_urls) if m not in skip and not any(pt.startswith('_') for pt in m.split('.'))]
     mods = []
-    for p in sorted(pkg_dir.rglob('*.py')):
-        rel = p.relative_to(pkg_dir)
-        parts = rel.parent.parts if p.name == '__init__.py' else (*rel.parent.parts, rel.stem)
-        if not parts or any(pt.startswith('_') for pt in parts): continue
-        nm = '.'.join((pkg_name, *parts))
-        if nm not in skip and has_public_api(p): mods.append(nm)
-    return guidance, mods
+    def _walk(d, pre):
+        for m in iter_modules([str(d)]):
+            if m.name.startswith('_'): continue
+            nm = f'{pre}.{m.name}'
+            if m.ispkg:
+                if nm not in skip and has_public_api(d/m.name/'__init__.py'): mods.append(nm)
+                _walk(d/m.name, nm)
+            elif nm not in skip and (not (py := d/f'{m.name}.py').exists() or has_public_api(py)): mods.append(nm)
+    _walk(pkg_dir, pkg_name)
+    return guidance, sorted(mods)
 
 # %% ../nbs/00_core.ipynb #848e5608
 def norm_docs(
