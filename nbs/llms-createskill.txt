@@ -1,0 +1,90 @@
+How to create pyskill modules (`pkg.skill`, `pkg.guidance`, named skills) and generate `llms.txt` from them.
+
+notation: /why
+
+## Human vs LLM docs
+
+Audience|Web|Python|Source
+-|-|-|-
+Human|`README.md`, `index.html`|`doc(pkg)`|`nbs/index.ipynb` (nbdev) or `pkg/__init__.py`
+LLM|`llms.txt`|`doc(pkg.skill)`|plain `pkg/skill.py` (never notebook-generated)
+
+- human pitch, install, narrative: never in `skill.py` or `llms.txt`
+- `doc(pkg)`: `__init__.py` human docs and API; appends `LLM docs: doc('pkg.skill')` via `find_spec_noimport` if `skill.py` exists    /no import-time `allow()` side effects
+
+## Module roles
+
+- `pkg.skill`: library-wide LLM guide, cross-ref index, optional curated `__all__` and `allow()`; single source for `doc(pkg.skill)` and `llms.txt`
+- `pkg.guidance`: companion docstring module for domain principles, judgement, or agent conduct (e.g. `fastanki.guidance` card design, `cordslite.guidance` read-only Discord conduct); no entry point    /no `list_pyskills()` clutter; route from `pkg.skill` (`Creating cards for a user: MUST read doc(pkg.guidance)`); auto-promoted to `## Docs` in `doc(pkg.skill)` and `llms.txt` (`llms-guidance.txt`)
+- named skills (`fastcore.editskill`, `dialoghelper.solveitskill`, `pyskills.createskill`, multi-skill bundles like `aai_pyskills.*`): subsystem tools, host-harness prompts, or secondary guides; never collide with `pkg.skill` or `llms.txt`
+- internal modules: prefix with `_` (`_helpers.py`) so `doc()`, `xdir()`, and `llms.txt` skip them uniformly
+- `allow()` in `pkg.skill`: runtime sandbox boundary only, never emitted to `llms.txt`    /lets `cordslite.skill` document the full library while allowing only reads in sandboxes
+
+## `pkg/skill.py` structure and entry point
+
+- docstring: first paragraph = `list_pyskills()` catalog entry (only part read pre-import) and `llms.txt` `> summary` (one tight line); body = compact guide (`doc(aai_pyskills.write_llms)`)
+- body headings: use `###`+ only (never `#` or `##`)    /keeps single `# pkg` and `## Section` valid in `llms.txt` and avoids colliding with `doc()`'s own `# module` / `## types:` / `## docs:` headings
+- `__docs__`: optional literal dict `{'Section': ['pkg.mod', ('Title', 'rel.html.md', 'desc'), ('Ext', 'https://...')]}` (`ast.literal_eval`, zero import); strings are Python modules (summary from module docstring's first paragraph via AST; fix weak module docstrings rather than overriding); tuples are non-module links. `doc()` renders `doc(pkg.mod)` lines and `[Title](rel)` links under `## docs:`; `llms.txt` renders each key as `## Section`
+- automatic discovery: `pkg.guidance` (if present and unlisted) is placed first under `## Docs`; every other public module in `pkg/` not listed in `__docs__` (from `mod_urls`, or `.py` files containing a top-level `def`/`class`) is appended under `## Optional` automatically
+- `__base_url__`: optional base URL override (normalized with trailing `/`); fallback: caller `base_url` in `pyskills.llms`, or `[project.urls].Documentation` in `doc()`
+- `__all__`: optional curated public API (`import *`)
+- `doc()`, `xdir()`: `__all__`, else non-private names defined (not imported) in module, plus explicitly imported sibling submodules
+
+```python
+r'''One-line summary for `list_pyskills()` and `llms.txt`.
+
+- workflow, idioms, gotchas; Creating X: MUST read `doc(mypkg.guidance)`
+'''
+
+__base_url__ = 'https://example.com/mypkg/'   # optional
+__docs__ = {'Docs': ['mypkg.core', ('Quickstart', 'start.html.md', 'First steps')]}
+```
+
+- entry point in `pyproject.toml` (only for skills agents should discover via `list_pyskills()`):
+
+```toml
+[project.entry-points.pyskills]
+my_skill = "mypkg.skill"    # key: any name
+```
+
+## Generating `llms.txt` (`pyskills.llms`)
+
+- output: `# <pkg>`, `> <first para>`, `Base URL: <url>/`, body verbatim, `## <section>` blocks from `__docs__` + auto-promoted `pkg.guidance`, optional `## API` (when `api_url` passed, e.g. `fastship` `ship-docs`), `## Optional` (auto-discovered remaining modules + explicit optional links), trailing marker
+- relative URLs: write `mod_urls` and `__docs__` links relative to `base_url`; external `https://...` links stay absolute; `llms_txt` and `exhash.open_doc` resolve relative links from `Base URL:` on remote, local, or raw GitHub files
+- companions (`llms-*.txt`): emitted only for pure-docstring modules lacking a `mod_urls` entry (such as `guidance.py` -> `llms-guidance.txt`, `createskill.py` -> `llms-createskill.txt`, `editskill.py` -> `llms-editskill.txt`), via AST with zero imports; `.txt` (not `.md`) copies verbatim in Quarto without `.html` conversion or sidebar clutter
+- callers: `nbdev-export` -> `nbs/llms.txt` (only when `pkg/skill.py` exists, passing `.ipynb`/`.qmd` `mod_urls` and `doc_url`); `fastship` `ship-docs` / `ship-llms` / `ship-release` / `ship-pr` -> repo-root `llms.txt` (with `api_url='api.html.md'` and `api/<mod>.html.md`); standalone `pyskills-llms <pkg_path> [--out ...] [--base-url ...] [--api-url ...]` or `pyskills.llms.update_llms_txt(...)`
+- protection: recognizes `<!-- Generated by ` markers; never overwrites hand-written `llms.txt` or `llms-*.txt`; deletes stale generated `llms-*.txt` when `skill.py` or a companion disappears
+
+## What goes where
+
+- `skill.py` docstring: pieces, how they fit, workflow, shared constraints, when to use what; promote key modules in `__docs__` (remaining documented modules appear under `## Optional` automatically); no parameter tables, defaults, result fields, or per-operation recipes    /`doc(module)` and published `.html.md` pages list the API
+- skill and API docs together: every tool-specific behaviour, limit, failure mode, default
+- parameter contracts: docments beside signature
+- operation docstring: operation-wide behaviour, errors, when to use, result structure; result fields there or on result type
+- explanations, executable lessons: notebook narrative; nbdev: `doc(nbdev.skill)` before editing
+- live-object inspection: state why in domain terms (browser: input events, readiness, resource ownership; API client: generated params and bound account/repo defaults live on instance, not class)
+- custom namespace display (e.g. fastspec groups): explain how to descend
+
+## Dynamic APIs
+
+- `__dir__`: truthful, safe; supported names only, runs no operation
+- generated callable: effective signature as `__signature__`, with name and instance-specific docs
+- `Annotated` descriptions: carried with generated params into `docments` and delegated wrappers
+- never document via `type(operation).__call__`    /loses generated signature, defaults
+- `_repr_markdown_`: `doc()` preserves it; use where namespace or generated object has useful doc view; data-oriented displays (e.g. accessibility tree): point readers to type's docs; plain functions/methods: none needed
+
+## Check rendered output
+
+- inspect real `doc()` output, not source: `pkg.skill`, `pkg.guidance`, representative classes, bound methods, returned objects, generated operations, long operation docs; inspect `pyskills.llms.pkg_llms()` output and companions too
+- shortening a skill: every removed fact stays findable (move missing contracts into owning API docs first; keep short domain discovery workflow)
+- discovery or rendering gap: fix it; never add a manual inventory as workaround
+- generated clients: check docs on locally built objects needing no request    /documenting mustn't spend tokens, mutate remote state, or open a browser
+
+## Without packaging
+
+- folder-local (where host enabled): public top-level `.py` module or package (`__init__.py`) in `_pyskills/` of opening folder or ancestor; no `pyproject.toml`, install, or entry point; package submodules = implementation; `_name` = private
+- host: `enable_local_skills(opening_folder)` at startup before tool layer (Solveit: dialoghelper bootstrap); scope fixed when dialog moves; details: `doc(enable_local_skills)`, `doc(pyskills.core)`
+- user-wide (personal skills; skills shared across isolated uv venvs): `pyskills_dir()`, typically `~/.local/share/pyskills/`; first `import pyskills` creates dir and writes `.pth` to `site-packages`    /importable wherever pyskills is imported
+- `register_pyskill('my_local.skill', docstring, code=module_source)`: creates skill + entry point there; `disable_pyskill`, `enable_pyskill`: hide, show, files kept
+
+<!-- Generated by pyskills-llms; edit pyskills/skill.py, not this file -->

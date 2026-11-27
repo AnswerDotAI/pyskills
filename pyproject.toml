@@ -7,7 +7,7 @@ name = "pyskills"
 dynamic = ["version"]
 description = "Python-native skills system"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [{name = "Jeremy Howard", email = "github@jhoward.fastmail.fm"}]
 keywords = ['nbdev']
@@ -15,7 +15,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
 ]
-dependencies = ['fastaudit', 'fastcore>=2.2.37']
+dependencies = ['fastaudit', 'fastcore>=2.2.50']
 
 [project.optional-dependencies]
 dev = ['httpx']
@@ -33,6 +33,7 @@ pyskills = "pyskills._modidx:d"
 
 [project.scripts]
 pyskills-doc = "pyskills.cli:doc_cli"
+pyskills-llms = "pyskills.llms:llms_cli"
 
 [tool.setuptools.dynamic]
 version = {attr = "pyskills.__version__"}
@@ -41,6 +42,7 @@ version = {attr = "pyskills.__version__"}
 include = ["pyskills"]
 
 [tool.nbdev]
+to_meta = ["export"]
 allowed_metadata_keys = ['solveit']
 allowed_cell_metadata_keys = ['solveit_ai']
 

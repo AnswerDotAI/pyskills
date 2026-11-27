@@ -46,15 +46,16 @@ Docs: https://AnswerDotAI.github.io/pyskills/core.html.md"""
 
 # %% auto #0
 __all__ = ['find_spec_noimport', 'ep_desc', 'Pyskills', 'list_pyskills', 'allow', 'chk_dest', 'AllowPolicy', 'PosAllowPolicy',
-           'PathWritePolicy', 'OpenWritePolicy', 'SymbolNotFound', 'resolve', 'xdir', 'doc', 'fmt_sig', 'docfind',
-           'info_md', 'pyskills_dir', 'ensure_pyskills_dir', 'clear_mod', 'enable_pyskill', 'register_pyskill',
-           'disable_pyskill', 'delete_pyskill', 'enable_local_skills', '__pytools__']
+           'PathWritePolicy', 'OpenWritePolicy', 'SymbolNotFound', 'resolve', 'xdir', 'doc', 'fmt_sig', 'pkg_mods',
+           'norm_docs', 'docfind', 'info_md', 'pyskills_dir', 'ensure_pyskills_dir', 'clear_mod', 'enable_pyskill',
+           'register_pyskill', 'disable_pyskill', 'delete_pyskill', 'enable_local_skills', '__pytools__']
 
 # %% ../nbs/00_core.ipynb #38e384dc
 from fastcore.utils import *
 from fastcore.docments import MarkdownRenderer,can_render,docments,docstring,ann_parts,DocmentText
+from fastcore.pyparse import parse_py_file
 from fastcore.xdg import *
-from importlib.metadata import entry_points
+from importlib.metadata import entry_points, metadata, packages_distributions
 from importlib.machinery import ModuleSpec
 from pkgutil import get_importer
 import builtins, importlib.util, types, inspect, collections, ast, site, shutil, sys, typing, textwrap, functools
@@ -88,15 +89,22 @@ def find_spec_noimport(name:str):
 
 
 # %% ../nbs/00_core.ipynb #6dda45ba
+def _mod_docstr(mod_nm):
+    "Module docstring of `mod_nm` via AST without importing it"
+    try: spec = find_spec_noimport(mod_nm)
+    except Exception: return ''
+    if not spec or not spec.origin: return ''
+    return m.doc if (m := parse_py_file(spec.origin, safe=True)) else ''
+
+def _first_para(d):
+    "First paragraph of docstring `d` as one line, or '' if empty or `Docs:`-only"
+    p = ' '.join(d.split('\n\n')[0].split()) if d else ''
+    return '' if p.startswith('Docs:') else p
+
 def ep_desc(ep):
     "First paragraph of docstring for entry point `ep`, without importing it"
-    try: spec = find_spec_noimport(ep.value.split(':')[0])
-    except: return
-    if not spec or not spec.origin: return None
-    tree = ast.parse(Path(spec.origin).read_text())
-    doc = ast.get_docstring(tree)
-    if not doc: return None
-    return doc.split('\n\n')[0]
+    d = _mod_docstr(ep.value.split(':')[0])
+    return d.split('\n\n')[0] if d else None
 
 # %% ../nbs/00_core.ipynb #d3233c49
 class Pyskills(dict):
@@ -389,10 +397,85 @@ def _doc_class(sym):
     parts.append('\nOverview only. Read `doc(Class.member)` for entries marked …; use an instance for dynamically bound members.')
     return PrettyString('\n'.join(parts))
 
+# %% ../nbs/00_core.ipynb #608d7a90
+def pkg_mods(
+    pkg_dir:str|Path, # Package directory
+    pkg_name:str, # Top-level import name of the package
+    mod_urls:dict=None, # Optional `{module_name: rel_url}` of documented modules
+)->tuple: # `(guidance_mod_or_None, sorted_optional_mods)`
+    "Discover `(guidance, mods)` for a package without importing it, skipping `_private` and `skill`"
+    pkg_dir = Path(pkg_dir)
+    guidance = f'{pkg_name}.guidance' if ((pkg_dir/'guidance.py').exists() or (pkg_dir/'guidance'/'__init__.py').exists()) else None
+    skip = {pkg_name, f'{pkg_name}.skill', guidance}
+    if mod_urls: return guidance, [m for m in sorted(mod_urls) if m not in skip and not any(pt.startswith('_') for pt in m.split('.'))]
+    mods = []
+    for p in sorted(pkg_dir.rglob('*.py')):
+        rel = p.relative_to(pkg_dir)
+        parts = rel.parent.parts if p.name == '__init__.py' else (*rel.parent.parts, rel.stem)
+        if not parts or any(pt.startswith('_') for pt in parts): continue
+        nm = '.'.join((pkg_name, *parts))
+        if nm not in skip and (m := parse_py_file(p, safe=True)) and any(d.is_public for d in m.defs): mods.append(nm)
+    return guidance, mods
+
+# %% ../nbs/00_core.ipynb #848e5608
+def norm_docs(
+    docs:dict|None, # `{section: [mod_str | (title, href[, desc]), ...]}` from `skill.py`
+    pkg_dir:str|Path=None, # Package directory for auto-discovering `guidance` and `Optional` modules
+    pkg_name:str=None, # Top-level package name
+    mod_urls:dict=None, # Optional `{module_name: rel_url}` of documented modules
+)->list: # `[(section, [('mod', name) | ('link', title, href, desc), ...]), ...]`
+    "Normalize `__docs__` and append auto-discovered `guidance` (`Docs`) and sibling modules (`Optional`)"
+    sects = {sec: [('mod', o) if isinstance(o, str) else ('link', o[0], o[1], o[2] if len(o)>2 else '')
+        for o in items] for sec,items in (docs or {}).items() if items}
+    listed = {it[1] for its in sects.values() for it in its if it[0]=='mod'}
+    if pkg_dir and pkg_name:
+        guidance,opt = pkg_mods(pkg_dir, pkg_name, mod_urls=mod_urls)
+        if guidance and guidance not in listed:
+            sects = ({**sects, 'Docs': [('mod', guidance), *sects['Docs']]} if 'Docs' in sects
+                else {'Docs': [('mod', guidance)], **sects})
+            listed.add(guidance)
+        if rem := [m for m in opt if m not in listed]: sects['Optional'] = [*sects.get('Optional', []), *(('mod', m) for m in rem)]
+    return list(sects.items())
+
+# %% ../nbs/00_core.ipynb #34ba5530
+def _pkg_doc_url(mod):
+    top = mod.__name__.split('.')[0]
+    for dist in packages_distributions().get(top) or [top]:
+        try: urls = metadata(dist).get_all('Project-URL') or []
+        except Exception: continue
+        for u in urls:
+            if u.lower().startswith('documentation,'): return u.partition(',')[2].strip().rstrip('/') + '/'
+    return ''
+
+def _fmt_docs(mod):
+    raw = inspect.getattr_static(mod, '__docs__', None)
+    is_sk = mod.__name__.endswith('.skill')
+    pdir = Path(mod.__file__).parent if is_sk and getattr(mod, '__file__', None) else None
+    docs = norm_docs(raw, pdir, mod.__name__[:-6]) if (raw or pdir) else []
+    if not docs: return [], set()
+    has_links = any(it[0]=='link' for _,its in docs for it in its)
+    base_raw = inspect.getattr_static(mod, '__base_url__', '').strip()
+    base = (base_raw.rstrip('/') + '/' if base_raw else _pkg_doc_url(mod)) if has_links else ''
+    lines = [f'\n## docs (base: {base}):' if base else '\n## docs:']
+    for sec,its in docs:
+        lines.append(f'### {sec}')
+        for it in its:
+            if it[0]=='mod':
+                d = _first_para(_mod_docstr(it[1]) or (inspect.cleandoc(sys.modules[it[1]].__doc__ or '') if it[1] in sys.modules else ''))
+                lines.append(f'- `doc({it[1]})`: {d}' if d else f'- `doc({it[1]})`')
+            else:
+                _,t,u,d = it
+                lines.append(f'- [{t}]({u}): {d}' if d else f'- [{t}]({u})')
+    return lines, {it[1] for _,its in docs for it in its if it[0]=='mod'}
+
 # %% ../nbs/00_core.ipynb #c10c4f82
 def _doc_module(mod, all=False):
     parts = [f'# module {mod.__name__}:\n']
     if mod.__doc__: parts.append(f'"""{inspect.cleandoc(mod.__doc__)}\n"""')
+    if hasattr(mod, '__path__') and not mod.__name__.endswith('.skill'):
+        try:
+            if find_spec_noimport(f'{mod.__name__}.skill'): parts.append(f"\nLLM docs: `doc('{mod.__name__}.skill')`")
+        except Exception: pass
     groups,refs = inspect.getattr_static(mod, '__pyskill_params__', {}),{}
     typs,funcs,subs = [],[],[]
     names = _xnames(mod)
@@ -400,12 +483,11 @@ def _doc_module(mod, all=False):
     for name,obj in _xdir(mod, [n for n in names if n not in hidden]):
         d = docstring(obj).splitlines()
         comment = f': ...  # {d[0].strip()}' if d and d[0].strip() else ''
-        if isinstance(obj, types.ModuleType): subs.append(f'  {name}{comment}')
+        if isinstance(obj, types.ModuleType): subs.append((obj.__name__, f'  {name}{comment}'))
         elif isinstance(obj, type):
             bases = [b.__name__ for b in obj.__mro__[1:-1]]
             if len(bases)>3: bases = bases[:3]+['…']
-            bases = ','.join(bases)
-            base_str = f'({bases})' if bases else ''
+            base_str = f"({','.join(bases)})" if bases else ''
             typs.append(f'- class {name}{base_str}{comment}')
         elif callable(obj):
             pre = 'async def' if is_async_callable(obj) else 'def'
@@ -418,10 +500,14 @@ def _doc_module(mod, all=False):
         parts.append('\n## shared params:')
         for g,r in refs.items(): parts += _fmt_group(g, *r)
     if hidden: parts.append(_elision(mod, hidden, served))
-    if subs and not all and len(inspect.cleandoc(mod.__doc__ or '').splitlines())>3:
-        parts.append(f"\n## elided: {len(subs)} submodules. `doc('{mod.__name__}', all=True)` lists them.")
-        subs = ()
-    if subs: parts += ['\n## submodules:', *subs]
+    doc_lines,listed = _fmt_docs(mod)
+    parts += doc_lines
+    if listed and not all: subs = [(m,s) for m,s in subs if m not in listed]
+    sub_lines = [s for _,s in subs]
+    if sub_lines and not all and len(inspect.cleandoc(mod.__doc__ or '').splitlines())>3:
+        parts.append(f"\n## elided: {len(sub_lines)} submodules. `doc('{mod.__name__}', all=True)` lists them.")
+        sub_lines = ()
+    if sub_lines: parts += ['\n## submodules:', *sub_lines]
     return PrettyString('\n'.join(parts))
 
 # %% ../nbs/00_core.ipynb #155cdb61

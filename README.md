@@ -5,13 +5,14 @@
 
 pyskills is a plugin system that lets Python packages register “skills” (units of LLM-usable functionality) via standard [entry points](https://packaging.python.org/en/latest/specifications/entry-points/). An LLM harness (e.g. solveit) discovers available pyskills without importing them, reads lightweight descriptions via AST inspection, and selectively loads chosen pyskills into context using standard imports.
 
-It includes [`list_pyskills()`](https://AnswerDotAI.github.io/pyskills/core.html#list_pyskills) for discovery, [`doc()`](https://AnswerDotAI.github.io/pyskills/core.html#doc) for rendering module/class/function documentation in LLM-friendly format, [`xdir()`](https://AnswerDotAI.github.io/pyskills/core.html#xdir) for listing a module or class’s public symbols, and an [`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow) system for registering safe callable access in sandboxed environments. Skills can be installed as regular packages with entry points, or dropped into an XDG data directory for quick local use.
+It includes [`list_pyskills()`](https://AnswerDotAI.github.io/pyskills/core.html#list_pyskills) for discovery, [`doc()`](https://AnswerDotAI.github.io/pyskills/core.html#doc) for rendering module/class/function documentation in LLM-friendly format, [`xdir()`](https://AnswerDotAI.github.io/pyskills/core.html#xdir) for listing a module or class’s public symbols, `pyskills.llms` (`pyskills-llms`) for generating `llms.txt` and companion `llms-*.txt` files from `pkg/skill.py`, and an [`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow) system for registering safe callable access in sandboxed environments. Skills can be installed as regular packages with entry points, or dropped into an XDG data directory for quick local use.
 
 pyskills follows the progressive disclosure approach of the [Agent Skills](https://agentskills.io/specification) specification. Both keep a short description for discovery apart from the full instructions loaded on demand. Agent Skills stores a skill as files: a `SKILL.md` with YAML frontmatter, plus `scripts/` and `references/` directories. A pyskill is a regular Python module instead. A standard entry point registers it, its docstrings document it, and `import` loads it. Because it’s ordinary Python, a host can use the same module to:
 
 - run its functions directly
 - read the structured documentation that [`doc()`](https://AnswerDotAI.github.io/pyskills/core.html#doc) generates
 - run it in a sandbox, where the callables it registers with [`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow) may perform operations the sandbox otherwise denies
+- generate `llms.txt` and companion `llms-*.txt` reference files for web-based agents from the same `pkg/skill.py` source
 
 ## Usage
 
@@ -69,7 +70,7 @@ import pyskills.skill
 
 Use [`doc()`](https://AnswerDotAI.github.io/pyskills/core.html#doc) to read its full documentation. [`doc()`](https://AnswerDotAI.github.io/pyskills/core.html#doc) works on modules, classes, and functions, rendering LLM-friendly output in each case.
 
-For a **module**, [`doc`](https://AnswerDotAI.github.io/pyskills/core.html#doc) shows all public classes and functions with their signatures and first docstring line, submodules, and any [`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow) calls:
+For a **module**, [`doc`](https://AnswerDotAI.github.io/pyskills/core.html#doc) shows its docstring, public classes and functions with signatures and first docstring line, submodules, and any `__docs__` cross-references. Calling `doc(pkg)` on a package renders the package’s own human-facing docs and appends a `LLM docs: doc('pkg.skill')` pointer when `pkg/skill.py` exists without importing it, while `doc(pkg.skill)` renders the compact LLM guide and its module/doc cross-references:
 
 ``` python
 print(doc(pyskills.skill)[-500:])
@@ -127,6 +128,15 @@ pyskills-doc --all aidialog.dlgskill
 
 Run `pyskills-doc --help` for the complete command syntax.
 
+`pyskills-llms` generates `llms.txt` (and any companion `llms-*.txt` files) from a package’s `pkg/skill.py` via AST:
+
+``` bash
+pyskills-llms pyskills
+pyskills-llms pyskills --out nbs/llms.txt --base-url https://example.com/docs/
+```
+
+In `nbdev` projects, `nbdev-export` calls `pyskills.llms` automatically to write `nbs/llms.txt`. In non-nbdev projects using `fastship`, `ship-docs`, `ship-llms`, `ship-release`, and `ship-pr` refresh `llms.txt` automatically.
+
 ### The [`allow`](https://AnswerDotAI.github.io/pyskills/core.html#allow) system
 
 When pyskills run in a sandboxed environment like [safepyrun](https://github.com/AnswerDotAI/safepyrun), they need to declare which callables are trusted to perform otherwise-denied operations (filesystem writes, subprocesses, network access). safepyrun uses [fastaudit](https://github.com/AnswerDotAI/fastaudit) to deny those effects unless they happen inside a callable registered in the `__pytools__` registry. The [`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow) function is how pyskills register their trusted callables.
@@ -174,21 +184,36 @@ print(doc(createskill)[:300])
 
 ## Creating pyskills
 
-A pyskill is a standard Python module that registers itself via entry points so LLM hosts can discover and load it. Your module needs three things:
+pyskills keeps human and LLM documentation separate:
 
-- **A docstring**: the first paragraph is the short description shown during discovery via [`list_pyskills()`](https://AnswerDotAI.github.io/pyskills/core.html#list_pyskills); the rest is the detailed documentation the LLM reads after loading.
-- **`__all__`**: lists the symbols available to the LLM.
-- **[`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow) calls**: declares what the LLM is permitted to call in sandboxed environments.
+| Audience | Web | Python | Source |
+|----|----|----|----|
+| Human | `README.md`, `index.html` | `doc(pkg)` | `nbs/index.ipynb` (nbdev) or `pkg/__init__.py` |
+| LLM | `llms.txt` | `doc(pkg.skill)` | plain `pkg/skill.py` (never notebook-generated) |
+
+Three module roles cover most packages:
+
+- **`pkg.skill`**: the package’s main LLM guide and cross-reference index, serving as the single source for both `doc(pkg.skill)` and `llms.txt`.
+- **`pkg.guidance`**: an optional companion docstring module for domain principles, judgement, or agent conduct (for example flashcard-design rules in `fastanki.guidance` or read-only Discord conduct in `cordslite.guidance`). Give it no entry point so it does not clutter [`list_pyskills()`](https://AnswerDotAI.github.io/pyskills/core.html#list_pyskills), and direct agents to it from `pkg.skill`; `doc(pkg.skill)` and `llms.txt` automatically promote `pkg.guidance` into `Docs` (`llms-guidance.txt`).
+- **Named skills** (such as `fastcore.editskill`, `dialoghelper.solveitskill`, or `pyskills.createskill`): subsystem tools, host-harness prompts, or secondary guides that stay separate from `pkg.skill` and `llms.txt`.
+
+A `pkg/skill.py` module uses:
+
+- **A docstring**: the first paragraph is both the [`list_pyskills()`](https://AnswerDotAI.github.io/pyskills/core.html#list_pyskills) catalog description (read via AST before import) and the `llms.txt` summary blockquote; the remaining body is the compact guide using `###`+ headings so `# pkg` and `## Section` stay reserved for `llms.txt` and [`doc()`](https://AnswerDotAI.github.io/pyskills/core.html#doc).
+- **Optional `__docs__` and `__base_url__`**: `__docs__` maps section names to lists mixing Python module names (`'mypkg.core'`, whose summary and `.html.md` URL are derived automatically) and `(title, href, desc)` tuples for non-module guides and external links. Any public module in `pkg/` not listed in `__docs__` is appended automatically under `Optional`; prefix internal modules with `_` so [`doc()`](https://AnswerDotAI.github.io/pyskills/core.html#doc), [`xdir()`](https://AnswerDotAI.github.io/pyskills/core.html#xdir), and `llms.txt` skip them uniformly. `__base_url__` overrides the base URL (otherwise supplied by `nbdev`/`fastship` or read from `[project.urls].Documentation` in [`doc()`](https://AnswerDotAI.github.io/pyskills/core.html#doc)).
+- **Optional `__all__` and [`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow)**: `__all__` curates the public API for `import *`; [`allow()`](https://AnswerDotAI.github.io/pyskills/core.html#allow) declares trusted callables for sandboxed hosts and is never emitted to `llms.txt`.
 
 Here’s a minimal example:
 
 ``` python
-'''Short description for discovery.
+r'''Short description for `list_pyskills()` and `llms.txt`.
 
-Detailed docs read by the LLM after import.'''
+Compact guide read by the LLM via `doc(mypkg.skill)` and `llms.txt`.
+When creating X for a user, read `doc(mypkg.guidance)`.'''
 
 from pyskills.core import allow
 
+__docs__ = {'Docs': ['mypkg.core', ('Quickstart', 'start.html.md', 'First steps')]}
 __all__ = ['my_func', 'MyClass']
 
 def my_func(x: int) -> str:
@@ -208,12 +233,20 @@ To register your module as a discoverable pyskill, add an entry point in your `p
 
 ``` toml
 [project.entry-points.pyskills]
-my_skill = "mypackage.mymodule"
+my_skill = "mypkg.skill"
 ```
 
 The key is an arbitrary name; the value is the module path. After installing the package, [`list_pyskills()`](https://AnswerDotAI.github.io/pyskills/core.html#list_pyskills) will include your pyskill automatically.
 
 For full details on creating pyskills, including allow policies for write-guarded operations, see `doc(createskill)` after importing it as shown above.
+
+### Generating `llms.txt`
+
+`pyskills.llms` ([`pkg_llms`](https://AnswerDotAI.github.io/pyskills/llms.html#pkg_llms), [`update_llms_txt`](https://AnswerDotAI.github.io/pyskills/llms.html#update_llms_txt), and the `pyskills-llms` CLI) builds `llms.txt` from `pkg/skill.py` purely via AST without importing the package.
+
+The generated file starts with `# <pkg>`, `> <first paragraph>`, and a normalized `Base URL: https://.../` line so readers (`llms_txt` and `exhash.open_doc`) resolve relative links whether opened from the docs site, raw GitHub, or local disk. Modules in `__docs__` and auto-discovered `Optional` modules link to their relative `.html.md` pages from `nbdev` or `fastship`; pure-docstring companions without a web page (such as `pkg.guidance` or `pyskills.createskill`) emit `llms-*.txt` files (`llms-guidance.txt`, `llms-createskill.txt`) copied verbatim by Quarto.
+
+Generated files carry an HTML marker comment. [`update_llms_txt`](https://AnswerDotAI.github.io/pyskills/llms.html#update_llms_txt) never overwrites a hand-written `llms.txt` that lacks a generated marker, and it removes stale generated `llms-*.txt` files when `pkg/skill.py` or a companion disappears. `nbdev-export` calls it for `nbs/llms.txt` whenever `pkg/skill.py` exists, and `fastship` runs it via `ship-docs`, `ship-llms`, `ship-release`, and `ship-pr`.
 
 ### Folder-local skills
 
@@ -251,4 +284,4 @@ allow(hello)
 
 This writes the module file into the XDG pyskills directory and creates a minimal entry point, so the pyskill immediately appears in [`list_pyskills()`](https://AnswerDotAI.github.io/pyskills/core.html#list_pyskills).
 
-You can also manage pyskills with [`enable_pyskill`](https://AnswerDotAI.github.io/pyskills/core.html#enable_pyskill) and [`disable_pyskill`](https://AnswerDotAI.github.io/pyskills/core.html#disable_pyskill) to toggle their visibility without deleting files, or use [`disable_pyskill`](https://AnswerDotAI.github.io/pyskills/core.html#disable_pyskill) to remove one entirely.
+You can also manage pyskills with [`enable_pyskill`](https://AnswerDotAI.github.io/pyskills/core.html#enable_pyskill) and [`disable_pyskill`](https://AnswerDotAI.github.io/pyskills/core.html#disable_pyskill) to toggle their visibility without deleting files, or use [`delete_pyskill`](https://AnswerDotAI.github.io/pyskills/core.html#delete_pyskill) to remove one entirely.
