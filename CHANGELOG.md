@@ -2,6 +2,14 @@
 
 <!-- do not remove -->
 
+## 0.0.37
+
+### New Features
+
+- Add pyskills.llms (pyskills-llms) to generate llms.txt from skill.py and support `__docs__` cross-references in doc() ([#67](https://github.com/AnswerDotAI/pyskills/issues/67))
+- Return sorted Pyskills dict with line-per-entry repr from `list_pyskills` and update skill discovery rules ([#66](https://github.com/AnswerDotAI/pyskills/issues/66))
+
+
 ## 0.0.36
 
 ### New Features
